@@ -38,8 +38,11 @@ email, credentials, and the SQLite database stay outside version control.
 - Live public discovery smoke tests passed for arXiv (`all:statistics`, one work,
   three candidate authors) and OpenAlex (`mean estimation`, one work, two candidate
   authors). Only public query terms were transmitted, using the synthetic demo home.
-- GitHub Actions passed on Python 3.11, 3.12, 3.13, and 3.14 at `192e2d1`:
-  https://github.com/hetankevin/llm-ae/actions/runs/38801343526 .
+- GitHub Actions passed all 62 tests and the demo on Python 3.11, 3.12, 3.13,
+  and 3.14 at `f6d6f7d`:
+  https://github.com/hetankevin/llm-ae/actions/runs/38801635593 .
+- CI uses Ubuntu 24.04 and the verified current v7 checkout/setup-python actions
+  to avoid deprecated Node action runtimes and an imminent ubuntu-latest change.
 - Follow-up robustness fixes sort unordered IMAP search results before cursoring,
   require UIDVALIDITY, normalize malformed Message-IDs, and handle malformed API
   payloads and network failures cleanly. Local tests/lint pass after these fixes.
