@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ruff_cache/
+dist/
+build/
+.env
+.env.*
+.llm-ae/
+*.sqlite*
+*.db
+*.eml
+!examples/*.eml
+.DS_Store
+
