@@ -1,5 +1,6 @@
 """One repeatable work cycle. Scheduling remains under the AE's control."""
 
+import imaplib
 import json
 
 from . import mail
@@ -11,7 +12,7 @@ def run(workflow, sync=False, analyze=False, send=False):
     if sync:
         try:
             result["intake"] = mail.sync(workflow)
-        except (AEError, OSError) as exc:
+        except (AEError, OSError, imaplib.IMAP4.error) as exc:
             result["errors"].append({"step": "intake", "error": str(exc)})
     if analyze:
         for sub in workflow.store.all(
@@ -40,7 +41,7 @@ def run(workflow, sync=False, analyze=False, send=False):
                         sub["id"], assessment["recommendation"], assessment["editor_note"]
                     )
                     result["drafts"].append(draft)
-            except AEError as exc:
+            except (AEError, OSError) as exc:
                 result["errors"].append({"submission": sub["id"], "error": str(exc)})
     result["drafts"].extend(workflow.reminders())
     if send:

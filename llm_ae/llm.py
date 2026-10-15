@@ -177,5 +177,5 @@ def assess(config, submission, document, kind="triage", reports=None):
         raise AEError(f"Model API returned HTTP {exc.code}; no assessment recorded") from exc
     except URLError as exc:
         raise AEError("Cannot reach the model endpoint") from exc
-    except (ValueError, KeyError, TypeError) as exc:
+    except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise AEError("Model returned malformed JSON; no assessment recorded") from exc

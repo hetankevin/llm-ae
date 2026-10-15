@@ -94,7 +94,7 @@ def public_results(workflow, source, query, limit):
                                 ),
                             }
                         )
-        except (ValueError, KeyError, TypeError) as exc:
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
             raise AEError("OpenAlex returned malformed data") from exc
     else:
         raise AEError("Unknown public discovery source")

@@ -128,6 +128,14 @@ class IntegrationTest(unittest.TestCase):
                 with self.assertRaises(AEError):
                     self.w.assess(self.sub["id"])
 
+    def test_malformed_model_response_shape_fails_cleanly(self):
+        self.configure_remote()
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-secret"}):
+            with patch("llm_ae.llm.urlopen", return_value=self.response(["unexpected"])):
+                with self.assertRaisesRegex(AEError, "malformed JSON"):
+                    self.w.assess(self.sub["id"])
+        self.assertEqual(self.store.all("SELECT * FROM assessments"), [])
+
     def test_arxiv_results_preserve_source_and_do_not_invent_email(self):
         xml = b"""<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>https://arxiv.org/abs/1234.5678</id>
         <title>A public paper</title><author><name>Sample Researcher</name></author></entry></feed>"""
@@ -178,7 +186,7 @@ class IntegrationTest(unittest.TestCase):
 
         def uid(command, *args):
             if command == "search":
-                return "OK", [b"1 2 3"]
+                return "OK", [b"3 1 2"]  # SEARCH results need not arrive sorted.
             if args[1] == "(RFC822.SIZE)":
                 return "OK", [b"2 (RFC822.SIZE 100)"]
             return "OK", [(b"2 (BODY[] {100}", b"From: editor@example.org\r\n\r\nhello"), b")"]
@@ -204,6 +212,15 @@ class IntegrationTest(unittest.TestCase):
         with patch("llm_ae.mail.connect_imap", return_value=client):
             messages = list(mail.fetch_messages(self.cfg, unseen_uids={"old": 100}))
         self.assertEqual(messages[0][:2], ("new", "1"))
+
+    def test_imap_missing_uidvalidity_does_not_guess_a_cursor(self):
+        client = MagicMock()
+        client.select.return_value = ("OK", [b"1"])
+        client.response.return_value = ("UIDVALIDITY", [None])
+        with patch("llm_ae.mail.connect_imap", return_value=client):
+            with self.assertRaisesRegex(AEError, "UIDVALIDITY"):
+                list(mail.fetch_messages(self.cfg))
+        client.uid.assert_not_called()
 
     def test_smtp_starttls_never_authenticates_before_tls(self):
         self.cfg["mail"].update(

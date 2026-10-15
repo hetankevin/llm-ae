@@ -30,10 +30,9 @@ def ingest(workflow, raw):
     if len(raw) > config["mail"]["max_message_bytes"]:
         raise AEError("Message exceeds mail.max_message_bytes")
     msg, body = parsed_message(raw)
-    mid = (
-        str(msg.get("Message-ID", "")).strip()
-        or f"<sha256-{hashlib.sha256(raw).hexdigest()}@local>"
-    )
+    mid = str(msg.get("Message-ID", "")).strip()
+    if not re.fullmatch(r"<[^<>\s]+>", mid):
+        mid = f"<sha256-{hashlib.sha256(raw).hexdigest()}@local>"
     existing = store.one("SELECT * FROM messages WHERE message_id=?", (mid,))
     if existing:
         return {
@@ -163,7 +162,9 @@ def fetch_messages(config, folder=None, unseen_uids=None):
         if status != "OK":
             raise AEError("Cannot select the configured IMAP folder")
         validity_response = client.response("UIDVALIDITY")[1]
-        validity = (validity_response[0] or b"unknown").decode()
+        if not validity_response or not validity_response[0]:
+            raise AEError("IMAP server did not provide UIDVALIDITY; no cursor advanced")
+        validity = validity_response[0].decode()
         since = (datetime.now(UTC) - timedelta(days=config["mail"]["lookback_days"])).strftime(
             "%d-%b-%Y"
         )
@@ -171,7 +172,9 @@ def fetch_messages(config, folder=None, unseen_uids=None):
         if status != "OK":
             raise AEError("IMAP search failed")
         cursor = int((unseen_uids or {}).get(validity, 0))
-        ids = [x for x in data[0].split() if int(x) > cursor][: config["mail"]["max_messages"]]
+        ids = sorted((x for x in data[0].split() if int(x) > cursor), key=int)[
+            : config["mail"]["max_messages"]
+        ]
         for message_uid in ids:
             status, size_data = client.uid("fetch", message_uid, "(RFC822.SIZE)")
             size_text = b" ".join(x for x in size_data if isinstance(x, bytes))
