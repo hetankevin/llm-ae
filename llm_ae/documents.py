@@ -6,7 +6,6 @@ from pathlib import Path
 
 from .config import AEError
 
-
 MAX_DOCUMENT_BYTES = 25_000_000
 
 
@@ -66,4 +65,3 @@ def read_file(path):
     if len(data) > MAX_DOCUMENT_BYTES:
         raise AEError("Manuscript exceeds the 25 MB limit")
     return data
-

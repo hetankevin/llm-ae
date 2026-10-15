@@ -14,31 +14,47 @@ def run(workflow, sync=False, analyze=False, send=False):
         except (AEError, OSError) as exc:
             result["errors"].append({"step": "intake", "error": str(exc)})
     if analyze:
-        for sub in workflow.store.all("SELECT * FROM submissions WHERE status IN ('received','under_review')"):
+        for sub in workflow.store.all(
+            "SELECT * FROM submissions WHERE status IN ('received','under_review')"
+        ):
             try:
                 if sub["status"] == "under_review":
-                    assignments = workflow.store.all("SELECT * FROM assignments WHERE submission_id=? AND round=?", (sub["id"], sub["round"]))
+                    assignments = workflow.store.all(
+                        "SELECT * FROM assignments WHERE submission_id=? AND round=?",
+                        (sub["id"], sub["round"]),
+                    )
                     if any(a["status"] in {"draft", "invited", "accepted"} for a in assignments):
                         continue
-                    if sum(a["status"] == "completed" for a in assignments) < workflow.config["workflow"]["target_reviews"]:
+                    if (
+                        sum(a["status"] == "completed" for a in assignments)
+                        < workflow.config["workflow"]["target_reviews"]
+                    ):
                         continue
-                assessment = workflow.assess(sub["id"], "triage" if sub["status"] == "received" else "synthesis")
+                assessment = workflow.assess(
+                    sub["id"], "triage" if sub["status"] == "received" else "synthesis"
+                )
                 result["assessments"].append({"submission": sub["id"], **assessment})
                 # Recommendations become drafts; routing to review requires the AE's action.
                 if assessment["recommendation"] in {"desk_reject", "accept", "revise", "reject"}:
-                    draft = workflow.decision(sub["id"], assessment["recommendation"], assessment["editor_note"])
+                    draft = workflow.decision(
+                        sub["id"], assessment["recommendation"], assessment["editor_note"]
+                    )
                     result["drafts"].append(draft)
             except AEError as exc:
                 result["errors"].append({"submission": sub["id"], "error": str(exc)})
     result["drafts"].extend(workflow.reminders())
     if send:
-        for draft in workflow.store.all("SELECT id FROM drafts WHERE status='approved' ORDER BY created_at,id"):
+        for draft in workflow.store.all(
+            "SELECT id FROM drafts WHERE status='approved' ORDER BY created_at,id"
+        ):
             try:
                 result["deliveries"].append(mail.deliver(workflow, draft["id"]))
             except (AEError, OSError) as exc:
                 result["errors"].append({"draft": draft["id"], "error": str(exc)})
     result["tasks"] = workflow.tasks()
-    workflow.store.audit("run_completed", "runner", {"errors": len(result["errors"]), "tasks": len(result["tasks"])})
+    workflow.store.audit(
+        "run_completed", "runner", {"errors": len(result["errors"]), "tasks": len(result["tasks"])}
+    )
     return result
 
 

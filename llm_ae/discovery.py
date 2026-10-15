@@ -7,9 +7,10 @@ import time
 import xml.etree.ElementTree as ET
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from .config import AEError
+from .http import urlopen
 
 
 def fetch(url):
@@ -21,7 +22,9 @@ def fetch(url):
             raise AEError("Discovery response exceeds the size limit")
         return data
     except HTTPError as exc:
-        raise AEError(f"Discovery API returned HTTP {exc.code}; check credentials/rate limits") from exc
+        raise AEError(
+            f"Discovery API returned HTTP {exc.code}; check credentials/rate limits"
+        ) from exc
     except URLError as exc:
         raise AEError("Discovery API is unreachable") from exc
 
@@ -38,8 +41,12 @@ def public_results(workflow, source, query, limit):
         previous = workflow.store.one("SELECT value FROM settings WHERE key='arxiv_last_request'")
         if previous and time.time() - float(previous["value"]) < 3:
             raise AEError("arXiv requires at least 3 seconds between requests; retry shortly")
-        workflow.store.db.execute("INSERT OR REPLACE INTO settings VALUES('arxiv_last_request',?)", (str(time.time()),))
-        url = "https://export.arxiv.org/api/query?" + urlencode({"search_query": query, "start": 0, "max_results": limit})
+        workflow.store.db.execute(
+            "INSERT OR REPLACE INTO settings VALUES('arxiv_last_request',?)", (str(time.time()),)
+        )
+        url = "https://export.arxiv.org/api/query?" + urlencode(
+            {"search_query": query, "start": 0, "max_results": limit}
+        )
         try:
             root = ET.fromstring(fetch(url))
         except ET.ParseError as exc:
@@ -53,7 +60,12 @@ def public_results(workflow, source, query, limit):
             for author in entry.findall("a:author", ns):
                 name = author.findtext("a:name", "", ns).strip()
                 if name:
-                    results.append({"name": name, "evidence": json.dumps({"paper": paper, "url": link, "query": query})})
+                    results.append(
+                        {
+                            "name": name,
+                            "evidence": json.dumps({"paper": paper, "url": link, "query": query}),
+                        }
+                    )
     elif source == "openalex":
         api_key = os.environ.get(workflow.config["discovery"]["openalex_key_env"], "")
         params = {"search": query, "per-page": limit}
@@ -65,15 +77,31 @@ def public_results(workflow, source, query, limit):
                 for authorship in work.get("authorships", []):
                     author = authorship.get("author", {})
                     if author.get("display_name"):
-                        institutions = ", ".join(i.get("display_name", "") for i in authorship.get("institutions", []))
-                        results.append({"name": author["display_name"], "affiliation": institutions,
-                                        "evidence": json.dumps({"paper": work.get("title"), "url": work.get("id"),
-                                                                "author_id": author.get("id"), "query": query})})
+                        institutions = ", ".join(
+                            i.get("display_name", "") for i in authorship.get("institutions", [])
+                        )
+                        results.append(
+                            {
+                                "name": author["display_name"],
+                                "affiliation": institutions,
+                                "evidence": json.dumps(
+                                    {
+                                        "paper": work.get("title"),
+                                        "url": work.get("id"),
+                                        "author_id": author.get("id"),
+                                        "query": query,
+                                    }
+                                ),
+                            }
+                        )
         except (ValueError, KeyError, TypeError) as exc:
             raise AEError("OpenAlex returned malformed data") from exc
     else:
         raise AEError("Unknown public discovery source")
-    workflow.store.db.execute("INSERT OR REPLACE INTO settings VALUES(?,?)", (key, json.dumps({"at": time.time(), "results": results})))
+    workflow.store.db.execute(
+        "INSERT OR REPLACE INTO settings VALUES(?,?)",
+        (key, json.dumps({"at": time.time(), "results": results})),
+    )
     return results
 
 
@@ -82,18 +110,31 @@ def discover(workflow, sid, source, query, limit=10):
     if not query.strip() or not 1 <= limit <= 50:
         raise AEError("Supply a query and a limit between 1 and 50")
     if source == "scholar":
-        return {"url": "https://scholar.google.com/scholar?" + urlencode({"q": query}),
-                "note": "Inspect Scholar in your browser, then add candidates with reviewers add. No scraping."}
+        return {
+            "url": "https://scholar.google.com/scholar?" + urlencode({"q": query}),
+            "note": "Inspect Scholar in your browser, then add candidates with reviewers add. No scraping.",
+        }
     if source == "contacts":
         tokens = set(re.findall(r"\w+", query.casefold()))
         results = []
         for c in workflow.store.all("SELECT * FROM contacts"):
             overlap = tokens & set(re.findall(r"\w+", (c["topics"] + " " + c["name"]).casefold()))
             if overlap:
-                results.append({"name": c["name"], "email": c["email"], "score": len(overlap) / len(tokens),
-                                "evidence": json.dumps({"source": c["source"], "subject": c["topics"], "matched_terms": sorted(overlap)})})
+                results.append(
+                    {
+                        "name": c["name"],
+                        "email": c["email"],
+                        "score": len(overlap) / len(tokens),
+                        "evidence": json.dumps(
+                            {
+                                "source": c["source"],
+                                "subject": c["topics"],
+                                "matched_terms": sorted(overlap),
+                            }
+                        ),
+                    }
+                )
         results = sorted(results, key=lambda c: c["score"], reverse=True)[:limit]
     else:
         results = public_results(workflow, source, query, limit)
     return [workflow.add_candidate(sid, source=source, **result) for result in results]
-

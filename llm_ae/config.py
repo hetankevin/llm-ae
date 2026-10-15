@@ -17,7 +17,7 @@ def address(value: str) -> str:
     return value
 
 
-DEFAULT_CONFIG = '''# Private runtime configuration. Do not commit this file.
+DEFAULT_CONFIG = """# Private runtime configuration. Do not commit this file.
 [ae]
 name = "Associate Editor"
 email = "ae@example.org"
@@ -60,7 +60,7 @@ auto_approve_reminders = false
 
 [discovery]
 openalex_key_env = "OPENALEX_API_KEY"
-'''
+"""
 
 
 class Config:
@@ -77,14 +77,26 @@ class Config:
         for section, values in defaults.items():
             if not isinstance(self.data.get(section, {}), dict):
                 raise AEError(f"Config section {section} must be a table")
+            for key, default in values.items():
+                value = self.data.get(section, {}).get(key, default)
+                if type(value) is not type(default):
+                    raise AEError(f"Invalid type for {section}.{key}")
+                if isinstance(default, list) and any(not isinstance(item, str) for item in value):
+                    raise AEError(f"{section}.{key} must contain strings")
             values.update(self.data.get(section, {}))
             self.data[section] = values
-        address(self["ae"]["email"])
+        self["ae"]["email"] = address(self["ae"]["email"])
         self["ae"]["editors"] = [address(x) for x in self["ae"]["editors"]]
+        for key in ("imap_port", "smtp_port"):
+            if not 1 <= self["mail"][key] <= 65535:
+                raise AEError(f"mail.{key} must be a valid port")
         for key in ("invitation_days", "review_days", "reminder_days", "target_reviews"):
             if type(self["workflow"][key]) is not int or self["workflow"][key] < 1:
                 raise AEError(f"workflow.{key} must be a positive integer")
-        if type(self["workflow"]["max_reminders"]) is not int or self["workflow"]["max_reminders"] < 0:
+        if (
+            type(self["workflow"]["max_reminders"]) is not int
+            or self["workflow"]["max_reminders"] < 0
+        ):
             raise AEError("workflow.max_reminders must be a nonnegative integer")
         for key in ("lookback_days", "max_messages", "max_message_bytes"):
             if type(self["mail"][key]) is not int or self["mail"][key] < 1:
@@ -93,6 +105,20 @@ class Config:
             raise AEError("mail.transport must be file or smtp")
         if self["mail"]["smtp_security"] not in {"ssl", "starttls"}:
             raise AEError("mail.smtp_security must be ssl or starttls")
+        for section, key in (
+            ("llm", "allow_remote_manuscripts"),
+            ("workflow", "auto_approve_reminders"),
+        ):
+            if type(self[section][key]) is not bool:
+                raise AEError(f"{section}.{key} must be a TOML boolean")
+        if type(self["llm"]["max_input_chars"]) is not int or self["llm"]["max_input_chars"] < 1:
+            raise AEError("llm.max_input_chars must be a positive integer")
+        if self["llm"]["provider"] not in {"offline", "openai"}:
+            raise AEError("llm.provider must be offline or openai")
+        try:
+            re.compile(self["mail"]["submission_subject"])
+        except re.error as exc:
+            raise AEError("mail.submission_subject must be a valid regular expression") from exc
 
     def __getitem__(self, section):
         return self.data[section]
@@ -117,4 +143,3 @@ def initialize(home: Path):
     for folder in ("documents", "outbox"):
         (home / folder).mkdir(mode=0o700, exist_ok=True)
     return Config(home)
-

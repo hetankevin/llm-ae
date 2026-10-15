@@ -4,24 +4,26 @@ import json
 import sqlite3
 import uuid
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from .config import AEError
 
 
 def now():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def days_after(days, since=None):
-    return (datetime.fromisoformat(since or now()) + timedelta(days=days)).isoformat(timespec="seconds")
+    return (datetime.fromisoformat(since or now()) + timedelta(days=days)).isoformat(
+        timespec="seconds"
+    )
 
 
 def uid(prefix):
     return f"{prefix}-{uuid.uuid4().hex[:12]}"
 
 
-SCHEMA = '''
+SCHEMA = """
 CREATE TABLE IF NOT EXISTS submissions (
  id TEXT PRIMARY KEY, title TEXT NOT NULL, authors TEXT NOT NULL DEFAULT '[]',
  editor TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'received', round INTEGER NOT NULL DEFAULT 1,
@@ -34,6 +36,8 @@ CREATE TABLE IF NOT EXISTS documents (
  sha256 TEXT NOT NULL, warnings TEXT NOT NULL DEFAULT '[]',
  UNIQUE(submission_id, round)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS submission_source ON submissions(source_message_id)
+ WHERE source_message_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS assessments (
  id TEXT PRIMARY KEY, submission_id TEXT NOT NULL REFERENCES submissions(id),
  round INTEGER NOT NULL, kind TEXT NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL,
@@ -42,6 +46,10 @@ CREATE TABLE IF NOT EXISTS assessments (
 CREATE TABLE IF NOT EXISTS contacts (
  email TEXT PRIMARY KEY, name TEXT NOT NULL, topics TEXT NOT NULL DEFAULT '',
  source TEXT NOT NULL, interactions INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS contact_observations (
+ email TEXT NOT NULL REFERENCES contacts(email), message_id TEXT NOT NULL,
+ PRIMARY KEY(email,message_id)
 );
 CREATE TABLE IF NOT EXISTS candidates (
  id TEXT PRIMARY KEY, submission_id TEXT NOT NULL REFERENCES submissions(id),
@@ -76,7 +84,7 @@ CREATE TABLE IF NOT EXISTS audit (
  entity TEXT NOT NULL, details TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-'''
+"""
 
 
 class Store:
@@ -115,7 +123,15 @@ class Store:
         return dict(row) if row else None
 
     def get(self, table, identifier):
-        if table not in {"submissions", "documents", "assessments", "candidates", "assignments", "drafts", "messages"}:
+        if table not in {
+            "submissions",
+            "documents",
+            "assessments",
+            "candidates",
+            "assignments",
+            "drafts",
+            "messages",
+        }:
             raise ValueError("Invalid entity")
         row = self.one(f"SELECT * FROM {table} WHERE id=?", (identifier,))
         if not row:
@@ -123,9 +139,13 @@ class Store:
         return row
 
     def audit(self, action, entity, details=None):
-        self.db.execute("INSERT INTO audit(at,action,entity,details) VALUES(?,?,?,?)",
-                        (now(), action, entity, json.dumps(details or {}, ensure_ascii=False)))
+        self.db.execute(
+            "INSERT INTO audit(at,action,entity,details) VALUES(?,?,?,?)",
+            (now(), action, entity, json.dumps(details or {}, ensure_ascii=False)),
+        )
 
     def status(self, sid, status):
-        self.db.execute("UPDATE submissions SET status=?,updated_at=? WHERE id=?", (status, now(), sid))
+        self.db.execute(
+            "UPDATE submissions SET status=?,updated_at=? WHERE id=?", (status, now(), sid)
+        )
         self.audit("status", sid, {"status": status})
