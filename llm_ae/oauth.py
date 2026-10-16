@@ -25,7 +25,10 @@ PROVIDERS = {
     "google": {
         "authorize": "https://accounts.google.com/o/oauth2/v2/auth",
         "token": "https://oauth2.googleapis.com/token",
-        "scopes": ["https://mail.google.com/"],
+        "scopes": [
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.send",
+        ],
         "label": "Google",
     },
     "microsoft": {

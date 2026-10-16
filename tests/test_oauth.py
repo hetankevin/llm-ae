@@ -236,7 +236,7 @@ class OAuthTests(unittest.TestCase):
             patch("llm_ae.mail.imaplib.IMAP4_SSL") as connect,
             self.assertRaisesRegex(AEError, "do not match"),
         ):
-            mail.connect_imap(self.config)
+            oauth.access_token(self.config)
         connect.assert_not_called()
 
     def test_refresh_error_is_sanitized_and_old_bundle_survives(self):
@@ -272,7 +272,7 @@ class OAuthTests(unittest.TestCase):
             oauth.token_request("google", {})
 
     def test_xoauth2_on_both_mail_transports_and_no_password_fallback(self):
-        for provider in CLIENTS:
+        for provider in ["microsoft"]:
             with self.subTest(provider=provider):
                 self.connected(provider)
                 imap, smtp = Mock(), Mock()
@@ -359,6 +359,7 @@ class OAuthTests(unittest.TestCase):
                         return_value=("code", "verifier", "http://localhost:1234/callback"),
                     ),
                     patch("llm_ae.oauth.token_request", return_value=self.response()),
+                    patch("llm_ae.gmail.request", return_value={"emailAddress": email}),
                     patch("llm_ae.mail.imaplib.IMAP4_SSL", return_value=imap),
                     patch("llm_ae.mail.smtplib.SMTP_SSL", return_value=smtp),
                     patch("llm_ae.mail.smtplib.SMTP", return_value=smtp),

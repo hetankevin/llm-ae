@@ -147,7 +147,11 @@ def account(config, device_auth=False):
 
 
 def check_mail(config):
-    """Authenticate both directions and select the folder read-only; never fetch/send."""
+    """Verify connection without fetching messages or sending a test email."""
+    if config["mail"]["oauth_provider"] == "google":
+        from .gmail import check
+
+        return check(config)
     try:
         client = mail.connect_imap(config)
         try:

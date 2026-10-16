@@ -21,8 +21,8 @@ app environment, then starts a three-step wizard:
 1. Choose **OpenAI** or **Anthropic**. The wizard installs the official account
    CLI if needed and opens its sign-in flow, or reuses your existing login.
 2. Connect your **email**. Gmail and Outlook use browser sign-in, with renewable
-   access saved in your system keychain. The wizard tests incoming and outgoing
-   mail before completing setup. See the activation status below.
+   access saved in your system keychain. The wizard checks the connected mailbox
+   before completing setup. See the activation status below.
 3. Enter your **name, journal, and editor addresses**. You're ready to import submissions.
 
 No API key, TOML editing, Node installation, or exported passwords are needed.
@@ -41,11 +41,12 @@ To change a connection or resume interrupted setup, run `llm-ae setup` again.
 For OpenAI device login, use `llm-ae setup --device-auth`.
 Existing data and unrelated configuration are preserved.
 
-**Gmail/Outlook activation is pending.** Browser sign-in and renewal are implemented,
-but this public build still needs LLM-AE's publisher-owned Google and Microsoft
-app registrations before real users can sign in. The publisher completes this
-once using the [activation guide](docs/oauth-publishing.md). End users do not
-create app registrations or app passwords. Live mailbox verification is pending.
+**Public email activation is pending.** LLM-AE's Google desktop client is registered
+and ready to bundle. Publishing its native client identifiers awaits GitHub's
+push-protection exception. Gmail uses read/send API permissions, with no modify/delete access.
+Google public verification and live mailbox testing are still pending. Microsoft
+publisher registration is also pending. See the [activation guide](docs/oauth-publishing.md).
+End users do not create app registrations or app passwords.
 
 Once activated, choose **gmail** for Gmail/Google Workspace, or **outlook** for
 Outlook.com/Microsoft 365, including custom journal or university domains. Your
@@ -91,10 +92,10 @@ requires the optional `pypdf` dependency.
 
 | Stage | LLM-AE does | AE action |
 |---|---|---|
-| Intake | Reads a selected IMAP folder without marking messages read, imports a unique manuscript attachment from configured editors, deduplicates messages | Resolve ambiguous attachments, confirm title/authors and manuscript portal link |
+| Intake | Reads a selected Gmail label or IMAP folder without marking messages read, imports a unique manuscript attachment from configured editors, deduplicates messages | Resolve ambiguous attachments, confirm title/authors and manuscript portal link |
 | Assessment | Extracts PDF/text/Markdown/LaTeX, produces a structured, evidence-linked triage with a configured model | Inspect the manuscript and assessment, choose review or a desk-rejection recommendation |
 | Reviewer discovery | Searches collected email contacts, arXiv, and OpenAlex; supplies a Scholar search link | Verify identity and address, record conflicts, choose reviewers |
-| Invitations | Drafts messages signed by the AE, sends through the AE's SMTP account after approval, tracks response deadlines | Approve invitations, confirm replies |
+| Invitations | Drafts messages signed by the AE, sends through the AE's connected email account after approval, tracks response deadlines | Approve invitations, confirm replies |
 | Review | Tracks reports, drafts bounded follow-ups, supports extensions, synthesizes completed reports | Resolve ambiguous replies and report disagreements |
 | Decision | Drafts the AE's recommendation to the editor, tracks the editor's response and revision rounds | Approve the recommendation and record the editor's decision |
 | Follow-up | Lists actions/deadlines, exports a case dossier, runs repeatable work cycles | Review tasks or connect the CLI to a local scheduler |
@@ -210,7 +211,7 @@ Authentication references: [Codex account login](https://developers.openai.com/c
 
 ## A complete workflow
 
-Import from IMAP, an `.eml` file, or a manuscript on disk:
+Import from the connected Gmail/IMAP mailbox, an `.eml` file, or a manuscript on disk:
 
 ```sh
 llm-ae inbox sync
@@ -353,7 +354,7 @@ code if a processing step fails.
 
 ## Delivery recovery and data handling
 
-SMTP does not provide exactly-once delivery. LLM-AE records `sending` before the
+Neither SMTP nor the Gmail send API provides exactly-once delivery. LLM-AE records `sending` before the
 network call and `sent` after the server accepts the message. A timeout leaves
 `uncertain`; a process crash can leave `sending`. Neither is retried automatically.
 Check Sent mail or server logs using the stored Message-ID, then record evidence:
@@ -365,7 +366,8 @@ llm-ae outbox reconcile DRAFT not-sent --note 'Server log confirms no acceptance
 
 A negative reconciliation returns the message to draft and requires approval
 again. SMTP server acceptance does not establish recipient delivery or reading.
-The app does not append mail to IMAP Sent; whether it appears there depends on
+Gmail API sends appear in Sent. For IMAP/SMTP providers, the app does not append
+mail to IMAP Sent; whether it appears there depends on
 your provider. Bounces are retained as pending correspondence when they match
 a known sender; inspect the mailbox for other delivery notices.
 

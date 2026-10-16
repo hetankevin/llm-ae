@@ -4,11 +4,11 @@ This is a one-time **LLM-AE publisher task**. Users never create a cloud project
 register an app, paste a client ID, or create an app password for Gmail/Outlook.
 They run `llm-ae setup`, choose their provider, and approve access in their browser.
 
-**Current release status:** the browser flow, keychain storage, refresh, and
-IMAP/SMTP integration are implemented and covered by automated tests. The bundled
-registrations in `llm_ae/oauth_clients.json` are empty. Publisher activation and
-live mailbox verification are pending. Setup reports this explicitly instead of
-asking end users to become developers or falling back to app passwords.
+**Current release status:** Google project `llm-ae`, its desktop OAuth client,
+and Gmail API activation exist. The client is downloaded locally; publication awaits a GitHub push-protection
+exception for the native client identifiers. Gmail uses its read/send
+API rather than full-mailbox IMAP permissions. Public verification and live
+mailbox tests are pending. Microsoft publisher registration remains pending.
 
 ## Google
 
@@ -17,9 +17,10 @@ asking end users to become developers or falling back to app passwords.
 2. Configure Google Auth Platform branding/audience and the consent screen for
    LLM-AE. Supply the publisher's support contact and public application/privacy
    URLs. Use the appropriate audience for the intended users.
-3. Request `https://mail.google.com/`. The existing IMAP/SMTP connector requires
-   this scope. The app does not delete messages or mark them read during intake,
-   although this protocol scope grants broader access.
+3. Enable the Gmail API and request `https://www.googleapis.com/auth/gmail.readonly`
+   and `https://www.googleapis.com/auth/gmail.send`. Do not request `mail.google.com`,
+   modify, or delete permissions. Intake uses immutable message-ID checkpoints,
+   bounded raw MIME retrieval, and read-only API calls.
 4. Create a **Desktop app** OAuth client and download its JSON. This uses a
    loopback redirect on `127.0.0.1` with a random port, PKCE, and state validation.
 5. Complete Google's applicable restricted-scope verification before a public
@@ -33,7 +34,7 @@ that installed clients cannot keep this value confidential. Only bundle the
 key, user access token, or refresh token here.
 
 Sources: [native-app authorization](https://developers.google.com/identity/protocols/oauth2/native-app),
-[Gmail OAuth scope](https://developers.google.com/workspace/gmail/imap/xoauth2-protocol),
+[Gmail API scopes](https://developers.google.com/workspace/gmail/api/auth/scopes),
 [OAuth verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification).
 
 ## Microsoft
@@ -79,8 +80,9 @@ is for development and private distributions; normal users do not set it.
 
 Test `llm-ae --home /path/to/new-test-home setup` with one Gmail and one Outlook
 mailbox, including a Microsoft 365 mailbox if supporting organizations. Complete
-the browser consent, verify both mail authentication checks, and exercise renewal.
-Setup selects the inbox read-only, fetches no messages, and sends no test email.
+the browser consent, verify mailbox identity and exercise renewal. Gmail setup
+checks the profile and selected label. Other providers authenticate IMAP/SMTP and
+select the inbox read-only. Setup fetches no messages and sends no test email.
 After these live checks and required provider approvals, publish the configured
 package and remove the pending-activation notice from README and this document.
 
@@ -93,8 +95,8 @@ Microsoft refresh tokens before using the new access token. Network/token errors
 never trigger password fallback. Normal CLI commands hold the runtime-home lock
 while refreshing, preventing concurrent refreshes from that home.
 
-The selected mailbox must successfully authenticate against both IMAP and SMTP
-before setup replaces its previous configuration. A failed replacement removes
+The selected Gmail mailbox must pass its API identity/label check; other providers
+must authenticate against both IMAP and SMTP before setup replaces its previous configuration. A failed replacement removes
 its new local credential and preserves the existing connection. Successful
 replacement removes the old local credential. To revoke provider-side access,
 use the Google/Microsoft account's authorized-app settings. Deleting local

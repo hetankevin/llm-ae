@@ -15,19 +15,39 @@ callback, keychain access/refresh bundles, automatic renewal/rotation, and XOAUT
 for existing IMAP/SMTP transports. Guided setup uses browser auth for Gmail and
 Outlook/Microsoft 365. Other providers retain their existing password setup.
 
-**Activation remains pending.** `llm_ae/oauth_clients.json` contains empty
-publisher registrations. Kevin resumed activation on October 16 and asked us to
-handle registration. Chrome has a signed-in personal Google Cloud session. A
-dedicated LLM-AE project form is prepared, but has not been submitted. Microsoft
-Entra is at sign-in and offers GitHub sign-in. Automatic approval review blocked
-the combined project-creation / GitHub-sign-in action pending specific account
-authorization; a bundled approval question is pending. No provider account,
-project, or OAuth client has been created or changed. The two Chrome tabs are
-marked for handoff. Do not claim public browser login is live.
-`docs/oauth-publishing.md` and `scripts/configure_oauth_clients.py` prepare the
-publisher work. End users are never asked to register apps, supply client IDs,
-or fall back to Gmail/Outlook app passwords. When activated, registrations ship
-inside the package so users only approve access in their browser.
+**Activation remains pending.** Kevin authorized Google project creation and
+Microsoft GitHub sign-in, then requested Safari and identified his GitHub account
+as the existing repository owner. Google project `llm-ae` was created. Its external
+OAuth branding and `LLM-AE desktop` client were created after explicit approval of
+Google's API User Data Policy. The native installed-client registration is downloaded and configured locally.
+GitHub push protection blocked publication of its client ID/desktop secret. A
+request to approve only these two intended public native-client values is pending.
+The credential update is left unstaged while unaffected implementation/docs ship.
+The downloaded original JSON is not committed. No user tokens have been obtained.
+
+Automatic review rejected the broad IMAP Gmail scope because it includes permanent
+deletion. The unsaved scope was discarded. Gmail now uses its API with only
+`gmail.readonly` and `gmail.send`; both scope declarations were saved successfully
+and Gmail API activation was verified. The client is marked for AI-agent use.
+Google remains in Testing with no test users; publishing requires branding URLs.
+Public app/privacy pages are in `docs/index.html` and `docs/privacy.html`; GitHub Pages was enabled for the main branch /docs directory. Deployment, branding
+URLs, and verification remain in progress. Microsoft registration is still absent.
+Safari's Entra/Azure session defaulted to Penn MFA; those attempts were canceled
+rather than registering under the university tenant. The requested GitHub flow now shows hetankevin. Microsoft-Corporation requests
+read-only GitHub profile and email access (no repositories). Automatic approval
+review requires explicit scope approval; that question is pending and the consent
+page remains open in Safari. The broader sign-in-linking request was already approved.
+
+Gmail now uses fixed-origin bounded API requests, mailbox identity checks,
+immutable message-ID checkpoints, raw MIME intake and the existing approved outbox.
+No Gmail mail mutation/delete endpoint is supported. Outlook retains IMAP/SMTP.
+123 tests pass locally (loopback tests require sandbox escalation), including new
+Gmail identity, pagination/checkpoint, limits, malformed payload, and send tests.
+Live mailbox authentication and public provider approvals remain unverified.
+Do not claim browser login works out of the box yet.
+
+`docs/oauth-publishing.md` and `scripts/configure_oauth_clients.py` describe publisher
+activation. End users never register apps or supply client IDs/app passwords.
 
 Python 3.11+ standard-library core, optional pypdf extraction, SQLite local state.
 CLI modules live in `llm_ae/`. Run with `python3 -m llm_ae` or the installed

@@ -1,4 +1,4 @@
-"""IMAP intake and a durable SMTP outbox, with explicit uncertain-send recovery."""
+"""Mail intake and a durable outbox, with explicit uncertain-send recovery."""
 
 import hashlib
 import imaplib
@@ -151,6 +151,8 @@ def xoauth2(username, token, challenge=None):
 
 def connect_imap(config):
     mail = config["mail"]
+    if mail["oauth_provider"] == "google":
+        raise AEError("Managed Gmail uses its read/send API, not IMAP")
     if not mail["imap_host"] or not mail["username"]:
         raise AEError("Configure mail.imap_host and mail.username first")
     token = mailbox_token(config)
@@ -172,6 +174,11 @@ def connect_imap(config):
 
 def fetch_messages(config, folder=None, unseen_uids=None):
     """Fetch a bounded batch in UID order. The caller persists a UID cursor."""
+    if config["mail"]["oauth_provider"] == "google":
+        from .gmail import fetch_messages as gmail_fetch
+
+        yield from gmail_fetch(config, folder, unseen_uids)
+        return
     client = connect_imap(config)
     try:
         status, _ = client.select(folder or config["mail"]["imap_folder"], readonly=True)
@@ -234,7 +241,9 @@ def sync(workflow):
                 "INSERT OR REPLACE INTO settings VALUES(?,?)", (key, json.dumps(cursors))
             )
             store.audit(
-                "imap_message_processed",
+                "gmail_message_processed"
+                if cfg["mail"]["oauth_provider"] == "google"
+                else "imap_message_processed",
                 message_uid,
                 {"uidvalidity": validity, "status": result["status"]},
             )
@@ -316,6 +325,8 @@ def build_email(workflow, draft):
 
 def connect_smtp(config):
     mail = config["mail"]
+    if mail["oauth_provider"] == "google":
+        raise AEError("Managed Gmail uses its read/send API, not SMTP")
     if not mail["smtp_host"] or not mail["username"]:
         raise AEError("Configure mail.smtp_host and mail.username first")
     token = mailbox_token(config)
@@ -342,6 +353,10 @@ def connect_smtp(config):
 
 
 def smtp_send(config, msg):
+    if config["mail"]["oauth_provider"] == "google":
+        from .gmail import send
+
+        return send(config, msg)
     client = connect_smtp(config)
     try:
         refused = client.send_message(
@@ -388,7 +403,7 @@ def deliver(workflow, did):
             )
             store.audit("send_uncertain", did, {"error_type": type(exc).__name__})
         raise AEError(
-            "SMTP delivery is unresolved. Check Sent mail/server logs by Message-ID, "
+            "Email delivery is unresolved. Check Sent mail/server logs by Message-ID, "
             "then use outbox reconcile; automatic retry is disabled."
         ) from exc
     with store.transaction():
