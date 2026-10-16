@@ -5,10 +5,11 @@ register an app, paste a client ID, or create an app password for Gmail/Outlook.
 They run `llm-ae setup`, choose their provider, and approve access in their browser.
 
 **Current release status:** Google project `llm-ae`, its desktop OAuth client,
-and Gmail API activation exist. The client is downloaded locally; publication awaits a GitHub push-protection
-exception for the native client identifiers. Gmail uses its read/send
-API rather than full-mailbox IMAP permissions. Public verification and live
-mailbox tests are pending. Microsoft publisher registration remains pending.
+and Gmail API activation exist. The native client is bundled with explicit approval
+for the two GitHub push-protection exceptions. Google is in production, with an
+unverified-app warning and 100-user cap until verification is approved. Gmail uses
+its read/send API rather than full-mailbox IMAP permissions. Public verification
+and live mailbox tests are pending. Microsoft publisher registration remains pending.
 
 ## Google
 

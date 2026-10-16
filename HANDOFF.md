@@ -20,23 +20,23 @@ Microsoft GitHub sign-in, then requested Safari and identified his GitHub accoun
 as the existing repository owner. Google project `llm-ae` was created. Its external
 OAuth branding and `LLM-AE desktop` client were created after explicit approval of
 Google's API User Data Policy. The native installed-client registration is downloaded and configured locally.
-GitHub push protection blocked publication of its client ID/desktop secret. A
-request to approve only these two intended public native-client values is pending.
-The credential update is left unstaged while unaffected implementation/docs ship.
+Kevin explicitly approved publishing the native client ID and desktop client secret.
+Both narrow GitHub push-protection exceptions were applied and confirmed.
+The package now bundles this native client; no broader protection was disabled.
 The downloaded original JSON is not committed. No user tokens have been obtained.
 
 Automatic review rejected the broad IMAP Gmail scope because it includes permanent
 deletion. The unsaved scope was discarded. Gmail now uses its API with only
 `gmail.readonly` and `gmail.send`; both scope declarations were saved successfully
 and Gmail API activation was verified. The client is marked for AI-agent use.
-Google remains in Testing with no test users; publishing requires branding URLs.
-Public app/privacy pages are in `docs/index.html` and `docs/privacy.html`; GitHub Pages was enabled for the main branch /docs directory. Deployment, branding
-URLs, and verification remain in progress. Microsoft registration is still absent.
+Google is now In production, with a 100-user unverified-app cap.
+The public app/privacy pages are deployed from `docs/` on GitHub Pages and both
+return HTTP 200. Homepage, privacy URL, and authorized domain were saved in
+Google branding. Provider verification remains pending. Microsoft registration is still absent.
 Safari's Entra/Azure session defaulted to Penn MFA; those attempts were canceled
 rather than registering under the university tenant. The requested GitHub flow now shows hetankevin. Microsoft-Corporation requests
-read-only GitHub profile and email access (no repositories). Automatic approval
-review requires explicit scope approval; that question is pending and the consent
-page remains open in Safari. The broader sign-in-linking request was already approved.
+read-only GitHub profile and email access (no repositories). Kevin explicitly approved those exact scopes, and the Authorize Microsoft-corp
+button was submitted. The redirect/account setup remains in progress. The broader sign-in-linking request was already approved.
 
 Gmail now uses fixed-origin bounded API requests, mailbox identity checks,
 immutable message-ID checkpoints, raw MIME intake and the existing approved outbox.
@@ -67,6 +67,7 @@ until approved. Routine reminders can be delegated explicitly. Manuscripts,
 email, credentials, and the SQLite database stay outside version control.
 
 ## Verification
+- Gmail API implementation CI passed at `4f446d3`: https://github.com/hetankevin/llm-ae/actions/runs/38977431134 .
 - Browser-email CI passed all 115 tests, lint, and the offline demo on Python
   3.11–3.14 at `61ea420`: https://github.com/hetankevin/llm-ae/actions/runs/38862523342 .
 - Wheel build passed and includes oauth.py and the publisher-registration resource.
@@ -164,8 +165,8 @@ email, credentials, and the SQLite database stay outside version control.
 - Local data is not application-encrypted; the audit trail is not tamper-evident.
 
 ## Next steps
-Public repo. Publisher activation was explicitly deferred by Kevin. If he resumes,
-follow `docs/oauth-publishing.md`, register the apps under accounts he controls,
+Public repo. Kevin explicitly resumed and authorized publisher activation. Continue
+with `docs/oauth-publishing.md`, register the apps under accounts he controls,
 complete required provider approvals, bundle registrations, and test real sign-in
 and renewal before removing the pending-activation notice. Preserve the workflow
 and delivery invariants above. Desktop Linux requires an unlocked system keychain.

@@ -42,9 +42,9 @@ For OpenAI device login, use `llm-ae setup --device-auth`.
 Existing data and unrelated configuration are preserved.
 
 **Public email activation is pending.** LLM-AE's Google desktop client is registered
-and ready to bundle. Publishing its native client identifiers awaits GitHub's
-push-protection exception. Gmail uses read/send API permissions, with no modify/delete access.
-Google public verification and live mailbox testing are still pending. Microsoft
+and bundled. Google is in production with an unverified-app warning and a
+100-user cap until verification is approved. Gmail uses read/send API permissions,
+with no modify/delete access. Live mailbox testing is still pending. Microsoft
 publisher registration is also pending. See the [activation guide](docs/oauth-publishing.md).
 End users do not create app registrations or app passwords.
 

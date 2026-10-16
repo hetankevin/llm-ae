@@ -1,4 +1,9 @@
 {
-  "google": {"client_id": "", "client_secret": ""},
-  "microsoft": {"client_id": ""}
+  "google": {
+    "client_id": "734728175267-dam0unil3s4jncs6i2b96gfp2fckogpo.apps.googleusercontent.com",
+    "client_secret": "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"
+  },
+  "microsoft": {
+    "client_id": ""
+  }
 }
