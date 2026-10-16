@@ -4,18 +4,20 @@
 Build a minimal CLI assistant for associate editors: email intake,
 manuscript assessment, reviewer discovery, correspondence, deadlines, and rounds.
 
-## State (2026-10-15)
+## State (2026-10-16)
 Working v0.1 implementation on `main`. Public remote (made public at Kevin's request on 2026-10-15):
 https://github.com/hetankevin/llm-ae . Git identity is configured locally as
 `hetankevin <kevtan@umich.edu>`.
 
-Latest request: allow users to use their OpenAI or Anthropic account, not only API
-keys. Added `auth login`, `auth use`, and `auth status` commands. They delegate
-sign-in to official Codex/Claude Code CLIs and select `llm.provider = "codex"`
-or `"claude"`. Aliases `oai`/`ant` work. `openai` still denotes the existing
-Responses API-key provider in TOML. Login selection preserves unrelated config,
-resets a previous model override, and enables remote processing only with an
-explicit flag. Credentials are never read/copied by this app.
+Latest request: install, account login, and email connection in one flow.
+Added `install.sh` (uv-managed app with Python/PDF/keychain dependencies) and
+`llm-ae setup`: official Codex/Claude CLI installation/login or session reuse,
+remote-processing choice, Gmail/iCloud/Yahoo/custom mail settings, hidden app
+password entry, OS keychain storage, read-only IMAP and SMTP authentication tests,
+and AE/journal/editor prompts. Setup saves completed stages and can be rerun.
+It never sends a test email. Config updates preserve unrelated settings and are
+validated before atomic replacement. Existing `auth login/use/status` and manual
+API/environment configuration remain available.
 
 Python 3.11+ standard-library core, optional pypdf extraction, SQLite local state.
 CLI modules live in `llm_ae/`. Run with `python3 -m llm_ae` or the installed
@@ -35,6 +37,13 @@ until approved. Routine reminders can be delegated explicitly. Manuscripts,
 email, credentials, and the SQLite database stay outside version control.
 
 ## Verification
+- Guided setup: 96 tests pass with setup extras, including the complete wizard,
+  retries, interruption, preserving existing state/config, no secret leakage,
+  custom servers, readonly connection checks, keychain failures, rejecting plaintext
+  keyring backends, official-installer download failures, and installer-to-terminal handoff.
+- A real macOS Keychain save/read/delete passed with a synthetic temporary entry.
+  No existing credentials were read and no real mailbox was accessed.
+- `ruff check .` and shell syntax check pass.
 - Account support: 78 tests pass locally, including login selection/failure,
   environment isolation, subprocess timeout cleanup, both structured-output
   adapters, remote-processing gates, and existing evidence validation.
@@ -89,10 +98,11 @@ email, credentials, and the SQLite database stay outside version control.
   is not represented as an established fact in the product.
 
 ## Remaining deployment work / limits
-- Supply AE/journal/editor details and IMAP/SMTP credentials. Choose an official
-  CLI account login or a model/API key. Live mailbox operation remains untested.
+- Run the guided setup with actual AE/journal/editor and mailbox details.
+  Live mailbox operation remains untested; network transports are covered with fixtures.
 - Confirm journal policy before enabling remote manuscript processing. Defaults are
-  offline provider and file transport. API `store: false` is not a zero-retention claim.
+  offline provider and file transport for manual initialization. Guided setup selects
+  SMTP only after connection tests pass, with explicit approval still required for sends. API `store: false` is not a zero-retention claim.
 - Mailbox OAuth token acquisition/refresh, OCR, DOCX, portal scraping, exhaustive conflict
   checks, automatic interpretation of reviewer replies, and push notifications are
   outside v0.1. Scheduler integration is documented but not installed.
@@ -101,7 +111,9 @@ email, credentials, and the SQLite database stay outside version control.
 - Local data is not application-encrypted; the audit trail is not tamper-evident.
 
 ## Next steps
-The repo's PUBLIC visibility has been verified via GitHub. Account setup is the
-next deployment step for Kevin. Future extensions should preserve the workflow
+The repo's PUBLIC visibility has been verified via GitHub. Guided setup is the
+next deployment step for Kevin. Outlook/Microsoft browser OAuth is not implemented,
+and managed Gmail accounts may block app passwords. Desktop Linux requires an
+unlocked Secret Service/KWallet; no plaintext fallback is used. Future extensions should preserve the workflow
 and delivery invariants above. Check the latest CI run when resuming work.
 

@@ -1,7 +1,9 @@
-"""Explicit configuration. Secrets are environment references, never TOML values."""
+"""Explicit configuration. Secrets are environment or keychain references, never TOML values."""
 
+import json
 import os
 import re
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -31,6 +33,7 @@ imap_port = 993
 imap_folder = "INBOX"
 username = ""
 password_env = "LLM_AE_MAIL_PASSWORD"
+password_keyring = "" # managed by llm-ae setup
 # Set oauth_token_env instead of password_env to use an OAuth2 access token.
 oauth_token_env = ""
 smtp_host = ""
@@ -69,7 +72,7 @@ class Config:
         self.home = home.expanduser().resolve()
         path = self.home / "config.toml"
         if not path.exists():
-            raise AEError(f"Not initialized: {self.home}. Run llm-ae init first.")
+            raise AEError(f"Not initialized: {self.home}. Run llm-ae setup first.")
         try:
             self.data = tomllib.loads(path.read_text())
         except tomllib.TOMLDecodeError as exc:
@@ -127,6 +130,10 @@ class Config:
         return self.data[section]
 
     def secret(self, section, key):
+        if section == "mail" and key == "password_env" and self["mail"]["password_keyring"]:
+            from .credentials import get
+
+            return get(self, self["mail"]["password_keyring"])
         name = self[section][key]
         value = os.environ.get(name, "")
         if not value:
@@ -146,3 +153,53 @@ def initialize(home: Path):
     for folder in ("documents", "outbox"):
         (home / folder).mkdir(mode=0o700, exist_ok=True)
     return Config(home)
+
+
+def update_config(config, updates):
+    """Patch ordinary TOML without losing unrelated settings; validate before replacing."""
+    path = config.home / "config.toml"
+    before = path.read_text()
+    after = before
+    expected = tomllib.loads(before)
+    for name, values in updates.items():
+        expected.setdefault(name, {}).update(values)
+        section = re.search(rf"(?m)^\[{re.escape(name)}\][ \t]*(?:#[^\n]*)?$", after)
+        if section:
+            start = section.end()
+            following = re.search(r"(?m)^\[", after[start:])
+            end = start + following.start() if following else len(after)
+            content = after[start:end]
+        else:
+            after += f"\n[{name}]\n"
+            start = end = len(after)
+            content = ""
+        for key, value in values.items():
+            line = f"{key} = {json.dumps(value, ensure_ascii=False)}"
+            pattern = rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=.*$"
+            if re.search(pattern, content):
+                content = re.sub(pattern, lambda _, line=line: line, content, count=1)
+            else:
+                content += "\n" + line + "\n"
+        after = after[:start] + content + "\n" + after[end:]
+    try:
+        if tomllib.loads(after) != expected:
+            raise ValueError("unexpected update")
+    except ValueError as exc:
+        raise AEError(
+            "Cannot update this TOML layout automatically. Existing config is unchanged."
+        ) from exc
+    # Validate full config before touching the live file, including on resumed setups.
+    with tempfile.TemporaryDirectory(prefix="llm-ae-config-") as directory:
+        candidate = Path(directory) / "config.toml"
+        candidate.write_text(after)
+        Config(Path(directory))
+    with tempfile.NamedTemporaryFile(mode="w", dir=config.home, delete=False) as stream:
+        temporary = Path(stream.name)
+        try:
+            stream.write(after)
+            stream.flush()
+            temporary.chmod(0o600)
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return Config(config.home)

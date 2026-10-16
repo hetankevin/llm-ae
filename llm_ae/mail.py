@@ -298,7 +298,7 @@ def build_email(workflow, draft):
     return msg
 
 
-def smtp_send(config, msg):
+def connect_smtp(config):
     mail = config["mail"]
     if not mail["smtp_host"] or not mail["username"]:
         raise AEError("Configure mail.smtp_host and mail.username first")
@@ -320,6 +320,15 @@ def smtp_send(config, msg):
             )
         else:
             client.login(mail["username"], config.secret("mail", "password_env"))
+        return client
+    except BaseException:
+        client.close()
+        raise
+
+
+def smtp_send(config, msg):
+    client = connect_smtp(config)
+    try:
         refused = client.send_message(
             msg, from_addr=config["ae"]["email"], to_addrs=[str(msg["To"])]
         )

@@ -31,6 +31,8 @@ def parser():
     root.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     root.add_argument("--version", action="version", version=__version__)
     commands = root.add_subparsers(dest="command", required=True)
+    setup = commands.add_parser("setup", help="guided account login and email connection")
+    setup.add_argument("--device-auth", action="store_true", help="OpenAI device login")
     commands.add_parser("init", help="initialize local state and configuration")
     commands.add_parser("doctor", help="check local configuration without contacting services")
     commands.add_parser("status", help="list submissions and next actions")
@@ -275,6 +277,7 @@ def dispatch(args, w):
             "pdf_support": importlib.util.find_spec("pypdf") is not None,
             "imap_configured": bool(w.config["mail"]["imap_host"]),
             "smtp_configured": bool(w.config["mail"]["smtp_host"]),
+            "mail_keychain_configured": bool(w.config["mail"]["password_keyring"]),
             "credentials_present": {
                 key: bool(os.environ.get(w.config[section][key], ""))
                 for section, key in [
@@ -472,6 +475,18 @@ def main(argv=None):
     os.umask(0o077)
     args = parser().parse_args(argv)
     try:
+        if args.command == "setup":
+            from . import setup
+
+            if args.json:
+                raise AEError("Setup is interactive and does not support --json")
+            args.home = args.home.expanduser().resolve()
+            if not sys.stdin.isatty():
+                raise AEError("Run llm-ae setup in an interactive terminal")
+            args.home.mkdir(parents=True, exist_ok=True, mode=0o700)
+            with locked(args.home):
+                setup.run(args.home, args.device_auth)
+            return 0
         if args.command == "init":
             config = initialize(args.home)
             store = Store(config.home)
@@ -508,6 +523,12 @@ def main(argv=None):
         )
         print(json.dumps({"error": error}) if args.json else f"Error: {error}", file=sys.stderr)
         return 1
+    except EOFError:
+        print("Setup paused. Run llm-ae setup to resume.", file=sys.stderr)
+        return 1
     except KeyboardInterrupt:
+        if args.command == "setup":
+            print("\nSetup paused. Run llm-ae setup to resume.", file=sys.stderr)
+            return 130
         print("Interrupted. Check outbox status before retrying any delivery.", file=sys.stderr)
         return 130

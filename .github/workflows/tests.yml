@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install -e '.[pdf,dev]'
+      - run: python -m pip install -e '.[setup,dev]'
       - run: ruff check .
       - run: python -m unittest discover -s tests -v
       - run: llm-ae --home "$RUNNER_TEMP/llm-ae-demo" --json demo

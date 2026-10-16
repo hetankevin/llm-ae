@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
+setup = ["pypdf>=5,<7", "keyring>=25,<26"]
 pdf = ["pypdf>=5,<7"]
 dev = ["ruff>=0.11"]
 

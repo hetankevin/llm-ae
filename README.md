@@ -7,14 +7,67 @@ leads, and follows review rounds through to the editor's decision.
 The core has no third-party runtime dependencies. State lives in SQLite and local
 files. Python 3.11+ on macOS or Linux is supported.
 
-## Try it
+## Install and connect
+
+On macOS or desktop Linux, paste this into your terminal:
 
 ```sh
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e '.[pdf]'
+curl -fsSL https://raw.githubusercontent.com/hetankevin/llm-ae/main/install.sh | sh
+```
 
-# Use a new directory. This is synthetic and makes no network calls.
+The installer sets up Python, PDF support, and keychain support in an isolated
+app environment, then starts a three-step wizard:
+
+1. Choose **OpenAI** or **Anthropic**. The wizard installs the official account
+   CLI if needed and opens its sign-in flow, or reuses your existing login.
+2. Connect your **email**. Gmail, iCloud, and Yahoo have built-in server settings.
+   The wizard opens your provider's app-password page, asks for the password
+   privately, saves it in your system keychain, and tests incoming and outgoing mail.
+3. Enter your **name, journal, and editor addresses**. You're ready to import submissions.
+
+No API key, TOML editing, Node installation, or exported passwords are needed.
+You need an account with access to Codex or Claude Code. The wizard asks whether
+your journal allows remote manuscript processing before enabling assessments.
+It sends no test emails. Subsequent editorial emails require explicit approval
+and a send command.
+
+```sh
+llm-ae inbox sync
+llm-ae tasks
+```
+
+If the command is not found immediately after installation, open a new terminal.
+To change a connection or resume interrupted setup, run `llm-ae setup` again.
+For OpenAI device login, use `llm-ae setup --device-auth`.
+Existing data and unrelated configuration are preserved.
+
+**Mail support:** Gmail requires 2-Step Verification and an
+[app password](https://support.google.com/accounts/answer/185833); some organization
+policies prevent this. [iCloud](https://support.apple.com/102525) and
+[Yahoo](https://help.yahoo.com/kb/SLN4075.html) also use app passwords.
+Other password-based IMAP/SMTP servers work through the custom option.
+Microsoft 365/Outlook browser login is **not yet integrated**; those accounts need
+the advanced OAuth-token configuration below. Linux needs an unlocked desktop
+keychain (Secret Service or KWallet). Setup never falls back to plaintext password storage.
+
+Already have [uv](https://docs.astral.sh/uv/guides/tools/)? Install directly:
+
+```sh
+uv tool install --python 3.13 --from 'llm-ae[setup] @ https://github.com/hetankevin/llm-ae/archive/refs/heads/main.zip' llm-ae
+llm-ae setup
+```
+
+The installer is [short and inspectable](install.sh). It uses uv's official
+installer when necessary and the selected provider's official installer:
+[Codex](https://developers.openai.com/codex/cli/) or
+[Claude Code](https://code.claude.com/docs/en/setup).
+Rerun it to update LLM-AE and revisit setup.
+
+## Try the offline demo
+
+After installation, use a new directory. This is synthetic and makes no network calls:
+
+```sh
 llm-ae --home /tmp/llm-ae-demo demo
 llm-ae --home /tmp/llm-ae-demo status
 llm-ae --home /tmp/llm-ae-demo outbox list
@@ -47,7 +100,7 @@ establishes that a proof is correct, an experiment reproduces, or a contribution
 is novel. The offline provider only produces a checklist and always requests
 human assessment.
 
-## Configure an editorial account
+## Advanced / manual configuration
 
 ```sh
 llm-ae init
@@ -56,12 +109,15 @@ llm-ae doctor
 ```
 
 Use `--home PATH` or `LLM_AE_HOME` to select a different private runtime directory.
-Put global options before the command. All commands support `--json` for scripts.
+Put global options before the command. Noninteractive commands support `--json` for scripts.
+Use `llm-ae setup` for guided setup instead of the manual steps below.
 
 1. Set `[ae]` name, email, journal, scope, and the allowed editor addresses.
 2. Configure IMAP/SMTP hostnames, username, and folder. SMTP supports implicit TLS
    (usually port 465) or required STARTTLS (usually port 587). IMAP uses TLS.
-3. Supply mailbox credentials through the named environment variables. Password/app-password
+3. Supply mailbox credentials through the named environment variables.
+   Clear `mail.password_keyring` when switching from wizard-managed credentials to
+   an environment-variable password. Password/app-password
    authentication and externally supplied OAuth2 access tokens are supported.
    Mailbox OAuth login and refresh are not implemented. Do not put passwords in TOML.
 4. Leave `mail.transport = "file"` while inspecting drafts. Change it to `"smtp"`
@@ -72,7 +128,8 @@ Put global options before the command. All commands support `--json` for scripts
    permits it and set `allow_remote_manuscripts = true`. This transmits extracted
    text and, for synthesis, referee reports to the selected provider.
 
-`doctor` reports whether configuration and environment variables are present. It
+`doctor` reports configuration, environment-variable presence, and whether a keychain
+reference is configured (it does not unlock or read the keychain). It
 does not test account access or display secrets. No live mailbox or API
 credentials are included in this repository.
 
@@ -320,7 +377,7 @@ inputs fail explicitly instead of silently dropping parts of a manuscript.
 ## Development
 
 ```sh
-pip install -e '.[pdf,dev]'
+pip install -e '.[setup,dev]'
 ruff check .
 python -m unittest discover -s tests -v
 ```
