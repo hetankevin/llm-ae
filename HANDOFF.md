@@ -16,10 +16,14 @@ for existing IMAP/SMTP transports. Guided setup uses browser auth for Gmail and
 Outlook/Microsoft 365. Other providers retain their existing password setup.
 
 **Activation remains pending.** `llm_ae/oauth_clients.json` contains empty
-publisher registrations. Google/Microsoft console inspection reached sign-in
-screens. Kevin declined the console-login step ("nah too much work"). No provider
-account/project was created or changed. Do not ask him again unless he resumes
-activation. Browser tabs were closed. Do not claim public browser login is live.
+publisher registrations. Kevin resumed activation on October 16 and asked us to
+handle registration. Chrome has a signed-in personal Google Cloud session. A
+dedicated LLM-AE project form is prepared, but has not been submitted. Microsoft
+Entra is at sign-in and offers GitHub sign-in. Automatic approval review blocked
+the combined project-creation / GitHub-sign-in action pending specific account
+authorization; a bundled approval question is pending. No provider account,
+project, or OAuth client has been created or changed. The two Chrome tabs are
+marked for handoff. Do not claim public browser login is live.
 `docs/oauth-publishing.md` and `scripts/configure_oauth_clients.py` prepare the
 publisher work. End users are never asked to register apps, supply client IDs,
 or fall back to Gmail/Outlook app passwords. When activated, registrations ship
@@ -51,7 +55,7 @@ email, credentials, and the SQLite database stay outside version control.
   cancellation/timeout, full wizard through mocked mail servers, refresh rotation,
   partial consent, wrong-mailbox rejection, no password fallback, and rollback.
 - Synthetic credentials only. No real Google/Microsoft OAuth exchange or mailbox
-  authentication has been tested because publisher activation is deferred.
+  authentication has been tested because publisher activation is pending.
 - Package registration helper rejects Google Web credentials and Microsoft client
   secrets; native client identifiers are shipped, user tokens never are.
 - Guided setup: 96 tests pass with setup extras, including the complete wizard,
