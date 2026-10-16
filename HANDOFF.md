@@ -38,12 +38,13 @@ email, credentials, and the SQLite database stay outside version control.
 - Account support: 78 tests pass locally, including login selection/failure,
   environment isolation, subprocess timeout cleanup, both structured-output
   adapters, remote-processing gates, and existing evidence validation.
-- Live ChatGPT-account assessment passed with a synthetic manuscript and no API
-  key using the existing Codex login. Claude account sign-in was confirmed through
-  its official CLI; live synthetic assessment is being checked before handoff.
+- Live ChatGPT-account and Claude-account assessments both passed with a synthetic
+  manuscript and no API key using the existing official CLI logins. Each returned
+  a valid structured assessment through the normal Workflow.assess path. The
+  Claude smoke test also exercised auth selection and reloaded the saved TOML.
 - Official CLI login itself was not repeated or changed on Kevin's machine.
   Smoke tests use temporary runtime homes and send no email.
-- 62 unittest cases pass with PDF extras on Python 3.13.9.
+- Baseline before account support: 62 unittest cases passed with PDF extras on Python 3.13.9.
 - `ruff check .` passes and source has been formatted.
 - Core tests also ran on the host Python 3.14.3 before PDF extras were installed.
 - Editable installation and installed `llm-ae` entry point verified.
