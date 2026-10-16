@@ -43,6 +43,8 @@ until approved. Routine reminders can be delegated explicitly. Manuscripts,
 email, credentials, and the SQLite database stay outside version control.
 
 ## Verification
+- Browser-email CI passed all 115 tests, lint, and the offline demo on Python
+  3.11–3.14 at `61ea420`: https://github.com/hetankevin/llm-ae/actions/runs/38862523342 .
 - Wheel build passed and includes oauth.py and the publisher-registration resource.
 - Browser email login: 115 tests pass locally. New coverage includes actual local
   callback requests for both providers, PKCE/state/host validation, browser
