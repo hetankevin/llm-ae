@@ -20,6 +20,9 @@ llm-ae = "llm_ae.cli:main"
 [tool.setuptools.packages.find]
 include = ["llm_ae*"]
 
+[tool.setuptools.package-data]
+llm_ae = ["oauth_clients.json"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

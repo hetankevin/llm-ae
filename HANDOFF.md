@@ -9,15 +9,21 @@ Working v0.1 implementation on `main`. Public remote (made public at Kevin's req
 https://github.com/hetankevin/llm-ae . Git identity is configured locally as
 `hetankevin <kevtan@umich.edu>`.
 
-Latest request: install, account login, and email connection in one flow.
-Added `install.sh` (uv-managed app with Python/PDF/keychain dependencies) and
-`llm-ae setup`: official Codex/Claude CLI installation/login or session reuse,
-remote-processing choice, Gmail/iCloud/Yahoo/custom mail settings, hidden app
-password entry, OS keychain storage, read-only IMAP and SMTP authentication tests,
-and AE/journal/editor prompts. Setup saves completed stages and can be rerun.
-It never sends a test email. Config updates preserve unrelated settings and are
-validated before atomic replacement. Existing `auth login/use/status` and manual
-API/environment configuration remain available.
+Latest request: Gmail and Outlook browser sign-in without app passwords.
+Implemented native OAuth authorization-code flow with PKCE/state, loopback
+callback, keychain access/refresh bundles, automatic renewal/rotation, and XOAUTH2
+for existing IMAP/SMTP transports. Guided setup uses browser auth for Gmail and
+Outlook/Microsoft 365. Other providers retain their existing password setup.
+
+**Activation remains pending.** `llm_ae/oauth_clients.json` contains empty
+publisher registrations. Google/Microsoft console inspection reached sign-in
+screens. Kevin declined the console-login step ("nah too much work"). No provider
+account/project was created or changed. Do not ask him again unless he resumes
+activation. Browser tabs were closed. Do not claim public browser login is live.
+`docs/oauth-publishing.md` and `scripts/configure_oauth_clients.py` prepare the
+publisher work. End users are never asked to register apps, supply client IDs,
+or fall back to Gmail/Outlook app passwords. When activated, registrations ship
+inside the package so users only approve access in their browser.
 
 Python 3.11+ standard-library core, optional pypdf extraction, SQLite local state.
 CLI modules live in `llm_ae/`. Run with `python3 -m llm_ae` or the installed
@@ -37,6 +43,15 @@ until approved. Routine reminders can be delegated explicitly. Manuscripts,
 email, credentials, and the SQLite database stay outside version control.
 
 ## Verification
+- Wheel build passed and includes oauth.py and the publisher-registration resource.
+- Browser email login: 115 tests pass locally. New coverage includes actual local
+  callback requests for both providers, PKCE/state/host validation, browser
+  cancellation/timeout, full wizard through mocked mail servers, refresh rotation,
+  partial consent, wrong-mailbox rejection, no password fallback, and rollback.
+- Synthetic credentials only. No real Google/Microsoft OAuth exchange or mailbox
+  authentication has been tested because publisher activation is deferred.
+- Package registration helper rejects Google Web credentials and Microsoft client
+  secrets; native client identifiers are shipped, user tokens never are.
 - Guided setup: 96 tests pass with setup extras, including the complete wizard,
   retries, interruption, preserving existing state/config, no secret leakage,
   custom servers, readonly connection checks, keychain failures, rejecting plaintext
@@ -90,6 +105,9 @@ email, credentials, and the SQLite database stay outside version control.
 - Approved content is hashed with sender identity. Editing resets approval.
 - CLI processes lock the runtime home. SQLite transactions protect state changes.
 - Intake uses Message-ID plus a source-message uniqueness index for crash recovery.
+- Browser mail tokens are refreshed under the runtime-home lock. OAuth tokens are
+  only sent to fixed provider endpoints and allowlisted TLS mail servers. Callback
+  queries and provider error bodies are never logged.
 - IMAP cursors include account, folder, and UIDVALIDITY. Contact scans use a separate
   cursor and deduplicate observed messages while retaining topic history.
 - Assessments cannot choose recipients or execute editorial workflow actions.
@@ -111,17 +129,17 @@ email, credentials, and the SQLite database stay outside version control.
 - Confirm journal policy before enabling remote manuscript processing. Defaults are
   offline provider and file transport for manual initialization. Guided setup selects
   SMTP only after connection tests pass, with explicit approval still required for sends. API `store: false` is not a zero-retention claim.
-- Mailbox OAuth token acquisition/refresh, OCR, DOCX, portal scraping, exhaustive conflict
-  checks, automatic interpretation of reviewer replies, and push notifications are
-  outside v0.1. Scheduler integration is documented but not installed.
+- Publisher registration/verification and live Gmail/Outlook login remain pending.
+  OAuth acquisition/refresh are implemented. OCR, DOCX, portal scraping, exhaustive
+  conflict checks, automatic interpretation of reviewer replies, and push notifications
+  remain outside v0.1. Scheduler integration is documented but not installed.
 - Public searches use explicitly supplied queries, not manuscript text. Scholar
   supplies a browser URL. Reviewer email addresses are never invented.
 - Local data is not application-encrypted; the audit trail is not tamper-evident.
 
 ## Next steps
-The repo's PUBLIC visibility has been verified via GitHub. Guided setup is the
-next deployment step for Kevin. Outlook/Microsoft browser OAuth is not implemented,
-and managed Gmail accounts may block app passwords. Desktop Linux requires an
-unlocked Secret Service/KWallet; no plaintext fallback is used. Future extensions should preserve the workflow
-and delivery invariants above. Check the latest CI run when resuming work.
-
+Public repo. Publisher activation was explicitly deferred by Kevin. If he resumes,
+follow `docs/oauth-publishing.md`, register the apps under accounts he controls,
+complete required provider approvals, bundle registrations, and test real sign-in
+and renewal before removing the pending-activation notice. Preserve the workflow
+and delivery invariants above. Desktop Linux requires an unlocked system keychain.

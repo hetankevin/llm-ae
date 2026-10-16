@@ -132,19 +132,35 @@ def ingest(workflow, raw):
     return {"status": status, "message": iid, "submission": sid, "assignment": aid, "note": note}
 
 
+def mailbox_token(config):
+    if config["mail"]["oauth_provider"]:
+        from .oauth import access_token
+
+        return access_token(config)
+    if config["mail"]["oauth_token_env"]:
+        return config.secret("mail", "oauth_token_env")
+    return ""
+
+
+def xoauth2(username, token, challenge=None):
+    # Google sends an error challenge after rejection. End SASL instead of resending credentials.
+    if challenge:
+        return ""
+    return f"user={username}\x01auth=Bearer {token}\x01\x01"
+
+
 def connect_imap(config):
     mail = config["mail"]
     if not mail["imap_host"] or not mail["username"]:
         raise AEError("Configure mail.imap_host and mail.username first")
+    token = mailbox_token(config)
     client = imaplib.IMAP4_SSL(
         mail["imap_host"], mail["imap_port"], ssl_context=ssl.create_default_context(), timeout=30
     )
     try:
-        if mail["oauth_token_env"]:
-            token = config.secret("mail", "oauth_token_env")
+        if token:
             client.authenticate(
-                "XOAUTH2",
-                lambda _: f"user={mail['username']}\x01auth=Bearer {token}\x01\x01".encode(),
+                "XOAUTH2", lambda challenge: xoauth2(mail["username"], token, challenge).encode()
             )
         else:
             client.login(mail["username"], config.secret("mail", "password_env"))
@@ -302,6 +318,7 @@ def connect_smtp(config):
     mail = config["mail"]
     if not mail["smtp_host"] or not mail["username"]:
         raise AEError("Configure mail.smtp_host and mail.username first")
+    token = mailbox_token(config)
     context = ssl.create_default_context()
     if mail["smtp_security"] == "ssl":
         client = smtplib.SMTP_SSL(mail["smtp_host"], mail["smtp_port"], context=context, timeout=30)
@@ -312,11 +329,9 @@ def connect_smtp(config):
         if mail["smtp_security"] == "starttls":
             client.starttls(context=context)
             client.ehlo()
-        if mail["oauth_token_env"]:
-            token = config.secret("mail", "oauth_token_env")
+        if token:
             client.auth(
-                "XOAUTH2",
-                lambda challenge=None: f"user={mail['username']}\x01auth=Bearer {token}\x01\x01",
+                "XOAUTH2", lambda challenge=None: xoauth2(mail["username"], token, challenge)
             )
         else:
             client.login(mail["username"], config.secret("mail", "password_env"))

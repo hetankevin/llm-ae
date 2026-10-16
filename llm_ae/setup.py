@@ -15,18 +15,11 @@ import warnings
 import webbrowser
 from pathlib import Path
 
-from . import accounts, credentials, mail
+from . import accounts, credentials, mail, oauth
 from .config import AEError, Config, address, initialize, update_config
 from .store import Store
 
 PRESETS = {
-    "gmail": (
-        "imap.gmail.com",
-        "smtp.gmail.com",
-        465,
-        "ssl",
-        "https://myaccount.google.com/apppasswords",
-    ),
     "icloud": (
         "imap.mail.me.com",
         "smtp.mail.me.com",
@@ -165,7 +158,7 @@ def check_mail(config):
             client.logout()
     except (OSError, imaplib.IMAP4.error) as exc:
         raise AEError(
-            "Incoming mail failed. Check the host, username, app password, and IMAP access policy."
+            "Incoming mail failed. Check that you signed into the requested mailbox and that IMAP access is enabled."
         ) from exc
     try:
         client = mail.connect_smtp(config)
@@ -174,6 +167,28 @@ def check_mail(config):
         raise AEError(
             "Outgoing mail failed. Check SMTP settings and whether your provider allows SMTP authentication."
         ) from exc
+
+
+def browser_mailbox(config, provider, email):
+    record = oauth.sign_in(provider, email)
+    settings = oauth.mail_settings(provider, email)
+    reference = oauth.persist(config, record)
+    settings["oauth_keyring"] = reference
+    trial = copy.deepcopy(config)
+    trial["mail"].update(settings)
+    try:
+        print("Checking incoming and outgoing mail…")
+        check_mail(trial)
+        result = update_config(config, {"ae": {"email": email}, "mail": settings})
+    except BaseException:
+        credentials.delete(config, reference)
+        raise
+    for old in (config["mail"]["oauth_keyring"], config["mail"]["password_keyring"]):
+        credentials.delete(config, old)
+    print(
+        "Email connected. You will stay signed in using your system keychain. No message was sent."
+    )
+    return result
 
 
 def mailbox(config):
@@ -204,18 +219,14 @@ def mailbox(config):
         )
     )
     if domain in {"outlook.com", "hotmail.com", "live.com", "msn.com"}:
-        suggested = "microsoft"
+        suggested = "outlook"
     kind = choose(
-        "Mail provider: gmail / icloud / yahoo / custom / microsoft",
-        (*PRESETS, "custom", "microsoft"),
+        "Mail provider: gmail / outlook / icloud / yahoo / custom",
+        ("gmail", "outlook", *PRESETS, "custom", "microsoft"),
         suggested,
     )
-    if kind == "microsoft":
-        raise AEError(
-            "Microsoft mail requires OAuth. The guided connector is not available yet. "
-            "Your AI login is saved. Use advanced OAuth-token configuration in the README "
-            "or rerun setup with another mailbox."
-        )
+    if kind in {"gmail", "outlook", "microsoft"}:
+        return browser_mailbox(config, "google" if kind == "gmail" else "microsoft", email)
     credentials.backend()  # Check storage before asking for a secret.
     settings = {
         "username": email,
@@ -223,16 +234,14 @@ def mailbox(config):
         "imap_folder": "INBOX",
         "password_env": "",
         "oauth_token_env": "",
+        "oauth_provider": "",
+        "oauth_keyring": "",
         "transport": "smtp",
     }
     if kind in PRESETS:
         host, smtp, smtp_port, security, url = PRESETS[kind]
         settings.update(imap_host=host, smtp_host=smtp, smtp_port=smtp_port, smtp_security=security)
         print("Create an app password named LLM-AE; use it here instead of your usual password.")
-        if kind == "gmail":
-            print(
-                "Google requires 2-Step Verification. Some managed accounts disable app passwords."
-            )
         print(url)
         if yes("Open the app-password page in your browser?", True):
             webbrowser.open(url)
@@ -259,8 +268,6 @@ def mailbox(config):
                 raise AEError(
                     "A private terminal is required to enter the password. Run llm-ae setup in a terminal."
                 ) from exc
-        if kind == "gmail":
-            password = password.replace(" ", "")
         if not password:
             print("Please enter the app password.")
             continue

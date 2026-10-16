@@ -20,9 +20,9 @@ app environment, then starts a three-step wizard:
 
 1. Choose **OpenAI** or **Anthropic**. The wizard installs the official account
    CLI if needed and opens its sign-in flow, or reuses your existing login.
-2. Connect your **email**. Gmail, iCloud, and Yahoo have built-in server settings.
-   The wizard opens your provider's app-password page, asks for the password
-   privately, saves it in your system keychain, and tests incoming and outgoing mail.
+2. Connect your **email**. Gmail and Outlook use browser sign-in, with renewable
+   access saved in your system keychain. The wizard tests incoming and outgoing
+   mail before completing setup. See the activation status below.
 3. Enter your **name, journal, and editor addresses**. You're ready to import submissions.
 
 No API key, TOML editing, Node installation, or exported passwords are needed.
@@ -41,14 +41,19 @@ To change a connection or resume interrupted setup, run `llm-ae setup` again.
 For OpenAI device login, use `llm-ae setup --device-auth`.
 Existing data and unrelated configuration are preserved.
 
-**Mail support:** Gmail requires 2-Step Verification and an
-[app password](https://support.google.com/accounts/answer/185833); some organization
-policies prevent this. [iCloud](https://support.apple.com/102525) and
-[Yahoo](https://help.yahoo.com/kb/SLN4075.html) also use app passwords.
-Other password-based IMAP/SMTP servers work through the custom option.
-Microsoft 365/Outlook browser login is **not yet integrated**; those accounts need
-the advanced OAuth-token configuration below. Linux needs an unlocked desktop
-keychain (Secret Service or KWallet). Setup never falls back to plaintext password storage.
+**Gmail/Outlook activation is pending.** Browser sign-in and renewal are implemented,
+but this public build still needs LLM-AE's publisher-owned Google and Microsoft
+app registrations before real users can sign in. The publisher completes this
+once using the [activation guide](docs/oauth-publishing.md). End users do not
+create app registrations or app passwords. Live mailbox verification is pending.
+
+Once activated, choose **gmail** for Gmail/Google Workspace, or **outlook** for
+Outlook.com/Microsoft 365, including custom journal or university domains. Your
+organization may require approval or restrict IMAP/SMTP access.
+[iCloud](https://support.apple.com/102525), [Yahoo](https://help.yahoo.com/kb/SLN4075.html),
+and other custom IMAP/SMTP servers retain password-based setup. Linux needs an
+unlocked desktop keychain (Secret Service or KWallet). Setup never falls back to
+plaintext credential storage.
 
 Already have [uv](https://docs.astral.sh/uv/guides/tools/)? Install directly:
 
@@ -119,7 +124,10 @@ Use `llm-ae setup` for guided setup instead of the manual steps below.
    Clear `mail.password_keyring` when switching from wizard-managed credentials to
    an environment-variable password. Password/app-password
    authentication and externally supplied OAuth2 access tokens are supported.
-   Mailbox OAuth login and refresh are not implemented. Do not put passwords in TOML.
+   Browser-managed Gmail/Outlook credentials refresh automatically. Externally
+   supplied OAuth access tokens do not. Do not put tokens or passwords in TOML.
+   Clear `mail.oauth_provider` and `mail.oauth_keyring` before switching from a
+   browser connection to externally managed credentials.
 4. Leave `mail.transport = "file"` while inspecting drafts. Change it to `"smtp"`
    when ready to send from the AE account. Preview export never marks mail sent
    or advances assignments.

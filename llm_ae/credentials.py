@@ -45,7 +45,7 @@ def get(config, reference):
         raise
     except Exception as exc:
         raise AEError(
-            "Could not read the mailbox password. Unlock your keychain and retry."
+            "Could not read the mailbox credential. Unlock your keychain and retry."
         ) from exc
     if not value:
         raise AEError("Mailbox credential missing from keychain. Run llm-ae setup again.")
@@ -59,5 +59,16 @@ def save(config, reference, value):
         raise
     except Exception as exc:
         raise AEError(
-            "Could not save the mailbox password. Unlock your keychain and retry."
+            "Could not save the mailbox credential. Unlock your keychain and retry."
         ) from exc
+
+
+def delete(config, reference):
+    """Remove an uncommitted or replaced credential after setup."""
+    if not reference:
+        return
+    try:
+        backend().delete_password(service(config), reference)
+    except Exception:
+        # Cleanup must not undo a working replacement or mask the original error.
+        pass

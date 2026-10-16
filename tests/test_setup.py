@@ -26,7 +26,7 @@ class SetupTests(unittest.TestCase):
         answers = [
             "openai",
             "yes",
-            "ae@gmail.com",
+            "ae@yahoo.com",
             "",
             "no",
             "Dr Editor",
@@ -54,24 +54,24 @@ class SetupTests(unittest.TestCase):
         ):
             self.assertEqual(main(["--home", str(self.home), "setup"]), 0)
             cfg = Config(self.home)
-            self.assertEqual(cfg.secret("mail", "password_env"), "abcdefghijklmnop")
+            self.assertEqual(cfg.secret("mail", "password_env"), "abcd efgh ijkl mnop")
         login.assert_called_once_with(unittest.mock.ANY, "openai")
         self.assertEqual(check.call_count, 1)
-        self.assertEqual(cfg["mail"]["imap_host"], "imap.gmail.com")
+        self.assertEqual(cfg["mail"]["imap_host"], "imap.mail.yahoo.com")
         self.assertEqual(cfg["mail"]["transport"], "smtp")
         self.assertEqual(cfg["ae"]["editors"], ["editor@journal.org", "second@journal.org"])
         self.assertTrue(cfg["llm"]["allow_remote_manuscripts"])
         for file in self.home.iterdir():
             if file.is_file():
-                self.assertNotIn(b"abcdefghijklmnop", file.read_bytes())
+                self.assertNotIn(b"abcd efgh ijkl mnop", file.read_bytes())
         self.assertIn("Setup complete", self.output.getvalue())
-        self.assertNotIn("abcdefghijklmnop", self.output.getvalue())
+        self.assertNotIn("abcd efgh ijkl mnop", self.output.getvalue())
 
     def test_failed_mail_preserves_old_configuration_and_does_not_save_secret(self):
         before = (self.home / "config.toml").read_bytes()
         with (
             contextlib.redirect_stdout(self.output),
-            patch("builtins.input", side_effect=["ae@gmail.com", "", "no", "no"]),
+            patch("builtins.input", side_effect=["ae@yahoo.com", "", "no", "no"]),
             patch("llm_ae.credentials.backend"),
             patch("llm_ae.setup.getpass.getpass", return_value="secret"),
             patch("llm_ae.setup.check_mail", side_effect=AEError("Incoming mail failed")),
@@ -133,15 +133,18 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(cfg["mail"]["imap_folder"], "Editorial")
         self.assertEqual(cfg["mail"]["smtp_security"], "starttls")
 
-    def test_microsoft_does_not_ask_for_password_or_claim_connection(self):
-        with (
-            contextlib.redirect_stdout(self.output),
-            patch("builtins.input", side_effect=["ae@outlook.com", ""]),
-            patch("llm_ae.setup.getpass.getpass") as password,
-        ):
-            with self.assertRaisesRegex(AEError, "requires OAuth"):
-                setup.mailbox(self.config)
-        password.assert_not_called()
+    def test_gmail_and_outlook_setup_use_browser_without_asking_for_password(self):
+        for email, provider in [("ae@gmail.com", "google"), ("ae@outlook.com", "microsoft")]:
+            with (
+                self.subTest(email=email),
+                contextlib.redirect_stdout(self.output),
+                patch("builtins.input", side_effect=[email, ""]),
+                patch("llm_ae.setup.getpass.getpass") as password,
+                patch("llm_ae.setup.browser_mailbox", return_value=self.config) as browser,
+            ):
+                self.assertIs(setup.mailbox(self.config), self.config)
+            password.assert_not_called()
+            browser.assert_called_once_with(self.config, provider, email)
 
     def test_account_installs_and_logs_in_if_needed(self):
         with (

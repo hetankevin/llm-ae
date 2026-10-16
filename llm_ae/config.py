@@ -36,6 +36,8 @@ password_env = "LLM_AE_MAIL_PASSWORD"
 password_keyring = "" # managed by llm-ae setup
 # Set oauth_token_env instead of password_env to use an OAuth2 access token.
 oauth_token_env = ""
+oauth_provider = "" # managed by browser sign-in: google or microsoft
+oauth_keyring = "" # token bundle reference, never the tokens themselves
 smtp_host = ""
 smtp_port = 465
 smtp_security = "ssl" # ssl or starttls; plaintext is not supported
@@ -105,6 +107,10 @@ class Config:
         for key in ("lookback_days", "max_messages", "max_message_bytes"):
             if type(self["mail"][key]) is not int or self["mail"][key] < 1:
                 raise AEError(f"mail.{key} must be a positive integer")
+        if self["mail"]["oauth_provider"] not in {"", "google", "microsoft"}:
+            raise AEError("mail.oauth_provider must be google or microsoft")
+        if self["mail"]["oauth_provider"] and not self["mail"]["oauth_keyring"]:
+            raise AEError("Browser email credentials missing. Run llm-ae setup.")
         if self["mail"]["transport"] not in {"file", "smtp"}:
             raise AEError("mail.transport must be file or smtp")
         if self["mail"]["smtp_security"] not in {"ssl", "starttls"}:

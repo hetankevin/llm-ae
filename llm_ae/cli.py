@@ -277,6 +277,8 @@ def dispatch(args, w):
             "pdf_support": importlib.util.find_spec("pypdf") is not None,
             "imap_configured": bool(w.config["mail"]["imap_host"]),
             "smtp_configured": bool(w.config["mail"]["smtp_host"]),
+            "mail_oauth_provider": w.config["mail"]["oauth_provider"],
+            "mail_oauth_configured": bool(w.config["mail"]["oauth_keyring"]),
             "mail_keychain_configured": bool(w.config["mail"]["password_keyring"]),
             "credentials_present": {
                 key: bool(os.environ.get(w.config[section][key], ""))
