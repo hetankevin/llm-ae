@@ -32,11 +32,15 @@ and Gmail API activation was verified. The client is marked for AI-agent use.
 Google is now In production, with a 100-user unverified-app cap.
 The public app/privacy pages are deployed from `docs/` on GitHub Pages and both
 return HTTP 200. Homepage, privacy URL, and authorized domain were saved in
-Google branding. Provider verification remains pending. Microsoft registration is still absent.
+Google branding. The Verify branding check was started (UI estimate up to five
+minutes). Its result has not been read because Kevin resumed active Safari use.
+Data-access verification is disabled until branding is verified and published. Microsoft registration is still absent.
 Safari's Entra/Azure session defaulted to Penn MFA; those attempts were canceled
 rather than registering under the university tenant. The requested GitHub flow now shows hetankevin. Microsoft-Corporation requests
 read-only GitHub profile and email access (no repositories). Kevin explicitly approved those exact scopes, and the Authorize Microsoft-corp
-button was submitted. The redirect/account setup remains in progress. The broader sign-in-linking request was already approved.
+button was submitted. Microsoft now offers to create a publisher account linked
+to GitHub. The final Next accepts the Microsoft Services Agreement; a separate
+explicit approval question is pending. Do not submit until answered. The broader sign-in-linking request was already approved.
 
 Gmail now uses fixed-origin bounded API requests, mailbox identity checks,
 immutable message-ID checkpoints, raw MIME intake and the existing approved outbox.
@@ -67,6 +71,8 @@ until approved. Routine reminders can be delegated explicitly. Manuscripts,
 email, credentials, and the SQLite database stay outside version control.
 
 ## Verification
+- Bundled Google client `efae0b2` passed CI and Pages deployment; local suite also
+  passed all 123 tests. CI: https://github.com/hetankevin/llm-ae/actions/runs/38977999223 .
 - Gmail API implementation CI passed at `4f446d3`: https://github.com/hetankevin/llm-ae/actions/runs/38977431134 .
 - Browser-email CI passed all 115 tests, lint, and the offline demo on Python
   3.11–3.14 at `61ea420`: https://github.com/hetankevin/llm-ae/actions/runs/38862523342 .
@@ -166,7 +172,9 @@ email, credentials, and the SQLite database stay outside version control.
 
 ## Next steps
 Public repo. Kevin explicitly resumed and authorized publisher activation. Continue
-with `docs/oauth-publishing.md`, register the apps under accounts he controls,
+with `docs/oauth-publishing.md`, finish Microsoft registration after the pending
+Services Agreement approval, and check Google branding verification. Browser
+control was paused during active user browsing. Then
 complete required provider approvals, bundle registrations, and test real sign-in
 and renewal before removing the pending-activation notice. Preserve the workflow
 and delivery invariants above. Desktop Linux requires an unlocked system keychain.
