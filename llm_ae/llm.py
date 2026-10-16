@@ -5,6 +5,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request
 
+from . import accounts
 from .config import AEError
 from .http import urlopen
 
@@ -103,16 +104,19 @@ def assess(config, submission, document, kind="triage", reports=None):
             "reviewer_topics": [],
             "editor_note": "Scientific assessment requires the associate editor's review.",
         }
-    if settings["provider"] != "openai":
-        raise AEError("llm.provider must be offline or openai")
+    account_provider = settings["provider"] in {"codex", "claude"}
+    if settings["provider"] != "openai" and not account_provider:
+        raise AEError("llm.provider must be offline, openai, codex, or claude")
     base = settings["base_url"].rstrip("/")
     parsed = urlparse(base)
     local = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
-    if parsed.scheme not in {"http", "https"} or (parsed.scheme != "https" and not local):
+    if not account_provider and (
+        parsed.scheme not in {"http", "https"} or (parsed.scheme != "https" and not local)
+    ):
         raise AEError("Remote model endpoints must use HTTPS")
-    if not local and not settings["allow_remote_manuscripts"]:
+    if (account_provider or not local) and not settings["allow_remote_manuscripts"]:
         raise AEError("Remote manuscript processing is disabled in config.toml")
-    if not settings["model"]:
+    if not account_provider and not settings["model"]:
         raise AEError("Set llm.model in config.toml")
     payload = {
         "journal": config["ae"]["journal"],
@@ -129,6 +133,9 @@ def assess(config, submission, document, kind="triage", reports=None):
             "Input exceeds llm.max_input_chars; no partial assessment was made. "
             "Review manually or raise the limit for a capable model."
         )
+    if account_provider:
+        result = accounts.assess(config, SYSTEM, source, schema(kind))
+        return finish(result, kind, document, payload["extraction_warnings"])
     body = {
         "model": settings["model"],
         "store": False,
@@ -168,14 +175,18 @@ def assess(config, submission, document, kind="triage", reports=None):
         if any(part.get("type") == "refusal" for part in parts):
             raise AEError("Model declined the assessment; review manually")
         text = "".join(p.get("text", "") for p in parts if p.get("type") == "output_text")
-        validated = validate(json.loads(text), kind, document["text"])
-        if any("little extractable" in w for w in payload["extraction_warnings"]):
-            validated["recommendation"] = "needs_human"
-            validated["limitations"].extend(payload["extraction_warnings"])
-        return validated
+        return finish(json.loads(text), kind, document, payload["extraction_warnings"])
     except HTTPError as exc:
         raise AEError(f"Model API returned HTTP {exc.code}; no assessment recorded") from exc
     except URLError as exc:
         raise AEError("Cannot reach the model endpoint") from exc
     except (ValueError, KeyError, TypeError, AttributeError) as exc:
         raise AEError("Model returned malformed JSON; no assessment recorded") from exc
+
+
+def finish(result, kind, document, warnings):
+    validated = validate(result, kind, document["text"])
+    if any("little extractable" in warning for warning in warnings):
+        validated["recommendation"] = "needs_human"
+        validated["limitations"].extend(warnings)
+    return validated

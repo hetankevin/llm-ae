@@ -61,24 +61,87 @@ Put global options before the command. All commands support `--json` for scripts
 1. Set `[ae]` name, email, journal, scope, and the allowed editor addresses.
 2. Configure IMAP/SMTP hostnames, username, and folder. SMTP supports implicit TLS
    (usually port 465) or required STARTTLS (usually port 587). IMAP uses TLS.
-3. Supply credentials through the named environment variables. Password/app-password
+3. Supply mailbox credentials through the named environment variables. Password/app-password
    authentication and externally supplied OAuth2 access tokens are supported.
-   OAuth login and refresh are not implemented. Do not put passwords in TOML.
+   Mailbox OAuth login and refresh are not implemented. Do not put passwords in TOML.
 4. Leave `mail.transport = "file"` while inspecting drafts. Change it to `"smtp"`
    when ready to send from the AE account. Preview export never marks mail sent
    or advances assignments.
-5. For model assessments, set `llm.provider = "openai"`, choose `llm.model`, and set
-   `OPENAI_API_KEY` in your shell. The adapter uses the Responses API with strict
-   structured output and `store: false`. A Responses-compatible local service can
-   be configured through `base_url` and a dummy key if that service needs none.
+5. Choose a ChatGPT account, a Claude account, or an API key using the instructions below.
 6. Before using a remote model with confidential manuscripts, confirm the journal
    permits it and set `allow_remote_manuscripts = true`. This transmits extracted
-   text and, for synthesis, referee reports to the configured endpoint.
-   `store: false` is not a guarantee of zero provider retention.
+   text and, for synthesis, referee reports to the selected provider.
 
 `doctor` reports whether configuration and environment variables are present. It
 does not test account access or display secrets. No live mailbox or API
 credentials are included in this repository.
+
+### Sign in with ChatGPT or Claude
+
+Install the official [Codex CLI](https://developers.openai.com/codex/cli/) for
+ChatGPT, or [Claude Code](https://code.claude.com/docs/en/setup) for Claude. Use
+an up-to-date release. The account must have access to that CLI, and its normal
+usage limits apply. Browser login to the chat website alone is not a CLI login.
+
+After `llm-ae init`, choose one:
+
+```sh
+llm-ae auth login openai
+# Or:
+llm-ae auth login anthropic
+```
+
+This opens the provider's official sign-in flow and selects it for assessments.
+No API key is required. Credentials and refresh stay with Codex or Claude Code,
+not in LLM-AE's configuration or database. On a headless machine, OpenAI login
+also supports `llm-ae auth login openai --device-auth`.
+
+If you already signed in through the official CLI, reuse that session:
+
+```sh
+llm-ae auth use openai
+llm-ae auth status
+```
+
+`anthropic` selects Claude, and `oai`/`ant` are accepted aliases. Both `login` and
+`use` accept an optional `--model NAME`; omitting it uses the CLI's default.
+Changing provider resets any previous model override. To enable remote manuscript
+processing after checking your journal's policy:
+
+```sh
+llm-ae auth use openai --allow-remote-manuscripts
+# Or: llm-ae auth use anthropic --allow-remote-manuscripts
+llm-ae submissions assess SUBMISSION
+```
+
+The saved providers are `codex` and `claude`. The account adapters exclude API-key
+environment variables and check the official CLI's authentication method before
+assessment. They do not fall back to API-key billing. To switch accounts or sign
+out, use the official CLI's account commands; that also affects its other uses.
+
+Assessment runs use temporary working directories, stdin for manuscript text,
+structured output, and no persistent CLI conversation. Codex runs read-only with
+user config, shell execution, web search, apps, hooks, and multi-agent features
+disabled. Claude runs with customizations and model tools disabled. Organization
+policies still apply. These are local execution controls, not a promise about
+provider-side retention. Account data handling follows the selected provider and
+workspace. `llm.cli_timeout_seconds` bounds each assessment (default 300 seconds).
+Older CLI versions that lack the required flags fail rather than retrying with
+fewer restrictions.
+
+### Use an API key instead
+
+Existing API-key configuration continues to work: set `llm.provider = "openai"`,
+choose `llm.model`, and set the environment variable named by `llm.api_key_env`
+(default `OPENAI_API_KEY`). This adapter uses the Responses API with strict
+structured output and `store: false`. A Responses-compatible local service can
+be configured through `base_url` and a dummy key if that service needs none.
+`store: false` is not a guarantee of zero provider retention. Anthropic account
+access uses Claude Code; a direct Anthropic API-key adapter is not included.
+
+Authentication references: [Codex account login](https://developers.openai.com/codex/auth/),
+[Claude Code authentication](https://code.claude.com/docs/en/authentication), and
+[Claude Code structured output](https://code.claude.com/docs/en/headless).
 
 ## A complete workflow
 

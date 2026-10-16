@@ -6,12 +6,13 @@ import imaplib
 import importlib.util
 import json
 import os
+import shutil
 import sqlite3
 import sys
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import __version__, discovery, documents, mail, runner
+from . import __version__, accounts, discovery, documents, mail, runner
 from .config import AEError, Config, initialize
 from .store import Store, days_after
 from .workflow import Workflow
@@ -34,6 +35,37 @@ def parser():
     commands.add_parser("doctor", help="check local configuration without contacting services")
     commands.add_parser("status", help="list submissions and next actions")
     commands.add_parser("tasks", help="list AE actions and deadlines")
+    auth = commands.add_parser(
+        "auth", help="sign in with a ChatGPT or Claude account"
+    ).add_subparsers(dest="action", required=True)
+    for name in ("login", "use"):
+        command = auth.add_parser(
+            name,
+            help="sign in and select an account"
+            if name == "login"
+            else "select an already signed-in account",
+        )
+        command.add_argument("provider", choices=list(accounts.ALIASES))
+        command.add_argument(
+            "--model",
+            default="",
+            help="optional model override; default is chosen by the official CLI",
+        )
+        command.add_argument(
+            "--allow-remote-manuscripts",
+            action="store_true",
+            help="enable remote assessment under your journal's policy",
+        )
+        if name == "login":
+            command.add_argument(
+                "--device-auth",
+                action="store_true",
+                help="OpenAI device login on a headless machine",
+            )
+    status = auth.add_parser(
+        "status", help="check official CLI sign-ins without showing credentials"
+    )
+    status.add_argument("provider", choices=list(accounts.ALIASES), nargs="?")
     commands.add_parser(
         "demo", help="run a synthetic lifecycle in a NEW --home directory; no network"
     )
@@ -208,12 +240,36 @@ def text_file(path):
 def dispatch(args, w):
     s = w.store
     command, action = args.command, getattr(args, "action", "")
+    if command == "auth":
+        if action == "status":
+            return (
+                accounts.status(args.provider)
+                if args.provider
+                else [accounts.status(p) for p in ("openai", "anthropic")]
+            )
+        result = accounts.select(
+            w.config,
+            args.provider,
+            login=action == "login",
+            device_auth=getattr(args, "device_auth", False),
+            model=args.model,
+            allow_remote=args.allow_remote_manuscripts,
+        )
+        s.audit(
+            "model_account_selected",
+            result["provider"],
+            {"remote_manuscripts_allowed": result["remote_manuscripts_allowed"]},
+        )
+        return result
     if command == "doctor":
         return {
             "home": str(w.config.home),
             "database_version": 1,
             "mail_transport": w.config["mail"]["transport"],
             "llm_provider": w.config["llm"]["provider"],
+            "account_clis_installed": {
+                name: bool(shutil.which(name)) for name in ("codex", "claude")
+            },
             "model": w.config["llm"]["model"],
             "remote_manuscripts_allowed": w.config["llm"]["allow_remote_manuscripts"],
             "pdf_support": importlib.util.find_spec("pypdf") is not None,
@@ -389,6 +445,8 @@ def emit(result, as_json=False):
             "id",
             "submission",
             "name",
+            "provider",
+            "account_ready",
             "kind",
             "title",
             "subject",

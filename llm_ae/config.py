@@ -43,12 +43,13 @@ max_messages = 100
 max_message_bytes = 25000000
 
 [llm]
-provider = "offline" # offline produces a checklist, never a scientific verdict
+provider = "offline" # offline, openai (API key), codex (ChatGPT), or claude (Claude account)
 base_url = "https://api.openai.com/v1"
-model = "" # choose a Responses-compatible model available to your account
+model = "" # required for openai; account providers use the CLI default when empty
 api_key_env = "OPENAI_API_KEY"
 allow_remote_manuscripts = false # enable only under your journal's policy
 max_input_chars = 180000
+cli_timeout_seconds = 300
 
 [workflow]
 invitation_days = 7
@@ -113,8 +114,10 @@ class Config:
                 raise AEError(f"{section}.{key} must be a TOML boolean")
         if type(self["llm"]["max_input_chars"]) is not int or self["llm"]["max_input_chars"] < 1:
             raise AEError("llm.max_input_chars must be a positive integer")
-        if self["llm"]["provider"] not in {"offline", "openai"}:
-            raise AEError("llm.provider must be offline or openai")
+        if self["llm"]["cli_timeout_seconds"] < 1:
+            raise AEError("llm.cli_timeout_seconds must be positive")
+        if self["llm"]["provider"] not in {"offline", "openai", "codex", "claude"}:
+            raise AEError("llm.provider must be offline, openai, codex, or claude")
         try:
             re.compile(self["mail"]["submission_subject"])
         except re.error as exc:

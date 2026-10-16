@@ -9,6 +9,14 @@ Working v0.1 implementation on `main`. Public remote (made public at Kevin's req
 https://github.com/hetankevin/llm-ae . Git identity is configured locally as
 `hetankevin <kevtan@umich.edu>`.
 
+Latest request: allow users to use their OpenAI or Anthropic account, not only API
+keys. Added `auth login`, `auth use`, and `auth status` commands. They delegate
+sign-in to official Codex/Claude Code CLIs and select `llm.provider = "codex"`
+or `"claude"`. Aliases `oai`/`ant` work. `openai` still denotes the existing
+Responses API-key provider in TOML. Login selection preserves unrelated config,
+resets a previous model override, and enables remote processing only with an
+explicit flag. Credentials are never read/copied by this app.
+
 Python 3.11+ standard-library core, optional pypdf extraction, SQLite local state.
 CLI modules live in `llm_ae/`. Run with `python3 -m llm_ae` or the installed
 `llm-ae` command. Local `.venv` has an editable install, pypdf, and ruff.
@@ -21,11 +29,20 @@ task lists, JSON dossiers, audit records, repeatable work cycles, and a syntheti
 offline lifecycle demo. See README for setup and complete command examples.
 
 ## Design
-Model output is advisory and cannot invoke tools. Editorial emails are drafts
+Model output is advisory. API assessments expose no tools; account CLI runs use
+restricted capabilities and return validated structured output. Editorial emails are drafts
 until approved. Routine reminders can be delegated explicitly. Manuscripts,
 email, credentials, and the SQLite database stay outside version control.
 
 ## Verification
+- Account support: 78 tests pass locally, including login selection/failure,
+  environment isolation, subprocess timeout cleanup, both structured-output
+  adapters, remote-processing gates, and existing evidence validation.
+- Live ChatGPT-account assessment passed with a synthetic manuscript and no API
+  key using the existing Codex login. Claude account sign-in was confirmed through
+  its official CLI; live synthetic assessment is being checked before handoff.
+- Official CLI login itself was not repeated or changed on Kevin's machine.
+  Smoke tests use temporary runtime homes and send no email.
 - 62 unittest cases pass with PDF extras on Python 3.13.9.
 - `ruff check .` passes and source has been formatted.
 - Core tests also ran on the host Python 3.14.3 before PDF extras were installed.
@@ -57,7 +74,12 @@ email, credentials, and the SQLite database stay outside version control.
 - Intake uses Message-ID plus a source-message uniqueness index for crash recovery.
 - IMAP cursors include account, folder, and UIDVALIDITY. Contact scans use a separate
   cursor and deduplicate observed messages while retaining topic history.
-- Model inputs have no tools and cannot choose recipients or execute actions.
+- Assessments cannot choose recipients or execute editorial workflow actions.
+  Account CLIs run in temporary directories with API-key environment variables
+  removed, account authentication checked, and no persistent conversation. Codex
+  uses read-only mode with shell/apps/hooks/agents/web disabled and user config
+  ignored. Claude uses safe mode, empty tool/MCP sets, and no session persistence.
+  Both retain organization-managed policy and provider-side account data policies.
   Unverified evidence quotes force manual assessment. Inputs are never truncated.
 - Reviewer conflicts require evidence and a verified address. Identity/coauthor
   checks are manual beyond blocking exact author names and AE/editor addresses.
@@ -66,11 +88,11 @@ email, credentials, and the SQLite database stay outside version control.
   is not represented as an established fact in the product.
 
 ## Remaining deployment work / limits
-- Supply AE/journal/editor details, IMAP/SMTP credentials, model and API key.
-  Live account operation has not been tested. Do not enable it using guessed settings.
+- Supply AE/journal/editor details and IMAP/SMTP credentials. Choose an official
+  CLI account login or a model/API key. Live mailbox operation remains untested.
 - Confirm journal policy before enabling remote manuscript processing. Defaults are
   offline provider and file transport. API `store: false` is not a zero-retention claim.
-- OAuth token acquisition/refresh, OCR, DOCX, portal scraping, exhaustive conflict
+- Mailbox OAuth token acquisition/refresh, OCR, DOCX, portal scraping, exhaustive conflict
   checks, automatic interpretation of reviewer replies, and push notifications are
   outside v0.1. Scheduler integration is documented but not installed.
 - Public searches use explicitly supplied queries, not manuscript text. Scholar
