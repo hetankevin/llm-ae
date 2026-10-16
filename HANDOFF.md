@@ -44,6 +44,14 @@ email, credentials, and the SQLite database stay outside version control.
 - A real macOS Keychain save/read/delete passed with a synthetic temporary entry.
   No existing credentials were read and no real mailbox was accessed.
 - `ruff check .` and shell syntax check pass.
+- Fresh install from the public GitHub archive succeeded in isolated uv tool/bin
+  directories, including PDF and keyring dependencies; the installed CLI demo passed.
+- Interactive PTY walkthrough completed all three stages using synthetic identity
+  and stubbed account/mail services. Real hidden getpass input did not echo.
+- Piped installer handoff (`cat install.sh | sh`) reached interactive setup through
+  /dev/tty using fixture executables, without changing shell profiles.
+- GitHub Actions passed all 96 tests, lint, and demo on Python 3.11–3.14 at
+  `0bf407f`: https://github.com/hetankevin/llm-ae/actions/runs/38850310784 .
 - Account support: 78 tests pass locally, including login selection/failure,
   environment isolation, subprocess timeout cleanup, both structured-output
   adapters, remote-processing gates, and existing evidence validation.
