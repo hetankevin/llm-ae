@@ -1,11 +1,11 @@
 # Handoff
 
 ## Goal
-Build a private, minimal CLI assistant for associate editors: email intake,
+Build a minimal CLI assistant for associate editors: email intake,
 manuscript assessment, reviewer discovery, correspondence, deadlines, and rounds.
 
 ## State (2026-10-15)
-Working v0.1 implementation on `main`. Private remote:
+Working v0.1 implementation on `main`. Public remote (made public at Kevin's request on 2026-10-15):
 https://github.com/hetankevin/llm-ae . Git identity is configured locally as
 `hetankevin <kevtan@umich.edu>`.
 
@@ -78,7 +78,7 @@ email, credentials, and the SQLite database stay outside version control.
 - Local data is not application-encrypted; the audit trail is not tamper-evident.
 
 ## Next steps
-The repo's PRIVATE visibility has been verified via GitHub. Account setup is the
+The repo's PUBLIC visibility has been verified via GitHub. Account setup is the
 next deployment step for Kevin. Future extensions should preserve the workflow
 and delivery invariants above. Check the latest CI run when resuming work.
 
