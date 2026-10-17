@@ -9,7 +9,9 @@ and Gmail API activation exist. The native client is bundled with explicit appro
 for the two GitHub push-protection exceptions. Google is in production, with an
 unverified-app warning and 100-user cap until verification is approved. Gmail uses
 its read/send API rather than full-mailbox IMAP permissions. Public verification
-and live mailbox tests are pending. Microsoft publisher registration remains pending.
+and live mailbox tests are pending. Website ownership is verified; Google asks
+for a 24-hour propagation wait before branding can be retried. Microsoft
+publisher registration awaits completion of Azure account verification.
 
 ## Google
 
